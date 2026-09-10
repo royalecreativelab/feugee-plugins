@@ -12,15 +12,22 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 <!-- /TABLE -->
 
 ---
-
 ## Install
 
-**macOS** — download [`install/Install-Feugee-Plugins.command`](install/Install-Feugee-Plugins.command), then:
+**macOS** — Choose one of the two options:
 
-1. Quit After Effects.
-2. Right-click the file → **Open** → **Open** (first run only, Gatekeeper asks once).
-3. Wait for `4/4 plugins installed`.
-4. Open After Effects → **Window › Extensions › [Plugin Name]**.
+- **Option 1 — Terminal One-Liner (Recommended & fast):**
+  Quit After Effects, open Terminal, paste this command and press Return:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.command | bash
+  ```
+
+- **Option 2 — Double-click installer (GUI):**
+  1. Quit After Effects.
+  2. Download and unzip [`install/Install-Feugee-Plugins.zip`](install/Install-Feugee-Plugins.zip) *(the `.zip` preserves macOS executable permissions)*.
+  3. Right-click `Install-Feugee-Plugins.command` → **Open** → **Open** (first run only, Gatekeeper asks once).
+  4. Wait for `4/4 plugins installed`.
+  5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
 **Windows** — see [Manual install](#manual-install) below.
 
