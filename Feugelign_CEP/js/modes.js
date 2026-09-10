@@ -405,6 +405,8 @@
   // Checks remote manifest, shows orange dot, syncs files in-place
   // ---------------------------------------------------------
   var DEFAULT_MANIFEST_URL =
+    "https://api.github.com/repos/royalecreativelab/feugee-plugins/contents/updates.json";
+  var FALLBACK_MANIFEST_URL =
     "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/updates.json";
 
   var pendingUpdate = null;
@@ -438,16 +440,21 @@
   }
 
   function fetchJson(url, cb) {
-    var finalUrl = url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now();
+    var isGhApi = url.indexOf("api.github.com") !== -1;
+    var finalUrl = isGhApi ? url : (url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now());
+    var fetchHeaders = isGhApi ? { "Accept": "application/vnd.github.raw" } : {};
 
     if (typeof fetch === "function") {
-      fetch(finalUrl, { cache: "no-store" })
+      fetch(finalUrl, { cache: "no-store", headers: fetchHeaders })
         .then(function (res) {
           if (!res.ok) throw new Error("HTTP " + res.status);
           return res.json();
         })
         .then(function (data) { cb(null, data); })
         .catch(function (err) {
+          if (isGhApi) {
+            return fetchJson(FALLBACK_MANIFEST_URL, cb);
+          }
           if (typeof require === "function") {
             tryNodeHttp(finalUrl, cb);
           } else {
