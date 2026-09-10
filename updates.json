@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-10T20:39:14Z",
+  "updatedAt": "2026-09-10T20:41:26Z",
   "plugins": {
     "knowledgenuke": {
       "slug": "knowledgenuke",
@@ -24,9 +24,9 @@
       "slug": "feugelign",
       "name": "Feugelign",
       "version": "1.2.5",
-      "updatedAt": "2026-09-10T20:39:14Z",
-      "changelog": "Release v1.2.5",
-      "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/feugelign.json",
+      "updatedAt": "2026-09-10T20:41:26Z",
+      "changelog": "Release v1.2.5 with raw GitHub bundle delivery",
+      "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/feugelign.json",
       "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugelign_v1.2.5.zxp"
     },
     "feugeemotion": {

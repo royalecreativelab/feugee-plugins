@@ -620,6 +620,40 @@
     }
   }
 
+  function fetchBundleJson(updateInfo, cb) {
+    var slug = updateInfo.slug;
+    var rawUrl = "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/" + slug + ".json";
+    var apiContentsUrl = "https://api.github.com/repos/royalecreativelab/feugee-plugins/contents/bundles/" + slug + ".json?ref=main";
+    var cdnUrl = "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/" + slug + ".json";
+
+    var mirrors = [rawUrl, apiContentsUrl, cdnUrl];
+    if (updateInfo.bundleUrl && mirrors.indexOf(updateInfo.bundleUrl) === -1) {
+      mirrors.push(updateInfo.bundleUrl);
+    }
+
+    function tryNext(idx) {
+      if (idx >= mirrors.length) {
+        return cb(new Error("All bundle mirrors failed or served outdated data"));
+      }
+
+      var currentUrl = mirrors[idx];
+      fetchSingleJson(currentUrl, function (err, bundle) {
+        if (err || !bundle || !bundle.files) {
+          return tryNext(idx + 1);
+        }
+
+        // Stale CDN cache protection: reject if bundle version < requested version
+        if (bundle.version && isNewerVersion(updateInfo.version, bundle.version)) {
+          return tryNext(idx + 1);
+        }
+
+        cb(null, bundle);
+      });
+    }
+
+    tryNext(0);
+  }
+
   function applyUpdate(updateInfo) {
     var bUp = document.getElementById("btnUpdate");
     if (bUp) bUp.classList.add("is-updating");
@@ -628,18 +662,18 @@
     setPluginStatus("Downloading " + (updateInfo.name || pInfo.slug) + " v" + updateInfo.version + "...", "var(--orange)");
 
     var extPath = getExtPath();
-    if (!extPath || !updateInfo.bundleUrl) {
-      fallbackZxp(updateInfo, "Missing bundle or extension path");
+    if (!extPath) {
+      fallbackZxp(updateInfo, "Missing extension path");
       return;
     }
 
-    fetchJson(updateInfo.bundleUrl, function (err, bundle) {
+    fetchBundleJson(updateInfo, function (err, bundle) {
       if (err || !bundle || !bundle.files) {
         fallbackZxp(updateInfo, "Could not fetch bundle: " + (err ? err.message : "Corrupt"));
         return;
       }
 
-      setPluginStatus("Installing v" + updateInfo.version + "...", "var(--orange)");
+      setPluginStatus("Installing v" + (bundle.version || updateInfo.version) + "...", "var(--orange)");
 
       var fileKeys = Object.keys(bundle.files);
       function writeNext(idx) {
@@ -649,7 +683,7 @@
             bUp.classList.remove("is-updating");
             bUp.classList.remove("has-update");
           }
-          setPluginStatus("Updated to v" + updateInfo.version + "! Reloading...", "var(--blue)");
+          setPluginStatus("Updated to v" + (bundle.version || updateInfo.version) + "! Reloading...", "var(--blue)");
 
           if (typeof window.__adobe_cep__ !== "undefined" && typeof window.__adobe_cep__.evalScript === "function") {
             var hostFile = extPath + "/jsx/host.jsx";
