@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-10T20:33:18Z",
+  "updatedAt": "2026-09-10T20:34:07Z",
   "plugins": {
     "knowledgenuke": {
       "slug": "knowledgenuke",
       "name": "Knowledge Nuke",
       "version": "3.1.1",
-      "updatedAt": "2026-09-10T20:33:04Z",
+      "updatedAt": "2026-09-10T20:34:02Z",
       "changelog": "Update released",
       "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/knowledgenuke.json",
       "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugee_KnowledgeNuke_v3.1.1.zxp"
@@ -15,7 +15,7 @@
       "slug": "sidequest",
       "name": "SideQuest",
       "version": "1.4.1",
-      "updatedAt": "2026-09-10T20:33:06Z",
+      "updatedAt": "2026-09-10T20:34:04Z",
       "changelog": "Update released",
       "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/sidequest.json",
       "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugee_SideQuest_v1.4.1.zxp"
@@ -24,7 +24,7 @@
       "slug": "feugelign",
       "name": "Feugelign",
       "version": "1.2.3",
-      "updatedAt": "2026-09-10T20:33:18Z",
+      "updatedAt": "2026-09-10T20:34:05Z",
       "changelog": "Fix auto-update stability and jsDelivr CDN support",
       "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/feugelign.json",
       "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugelign_v1.2.3.zxp"
@@ -33,7 +33,7 @@
       "slug": "feugeemotion",
       "name": "Feugee Motion",
       "version": "1.0.0",
-      "updatedAt": "2026-09-10T20:33:11Z",
+      "updatedAt": "2026-09-10T20:34:07Z",
       "changelog": "Update released",
       "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/feugeemotion.json",
       "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugee_Motion_v1.0.0.zxp"
