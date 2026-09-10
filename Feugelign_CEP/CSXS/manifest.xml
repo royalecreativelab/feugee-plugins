@@ -2,12 +2,12 @@
 <ExtensionManifest
   Version="6.0"
   ExtensionBundleId="com.feugee.feugelign"
-  ExtensionBundleVersion="1.2.3"
+  ExtensionBundleVersion="1.2.4"
   ExtensionBundleName="Feugelign"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <ExtensionList>
-    <Extension Id="com.feugee.feugelign.panel" Version="1.2.3" />
+    <Extension Id="com.feugee.feugelign.panel" Version="1.2.4" />
   </ExtensionList>
 
   <ExecutionEnvironment>
