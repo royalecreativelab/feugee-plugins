@@ -32,6 +32,8 @@ SKIP_NAMES = {".DS_Store", ".debug", "feugee-update.log", ".feugee-write-test",
               "Thumbs.db", "feugee-update-config.json"}
 SKIP_EXT = {".zxp", ".p12", ".png", ".jpg", ".jpeg", ".gif", ".zip", ".aep", ".ffx"}
 CANONICAL_MODES = os.path.join(ROOT, "Feugelign_CEP", "js", "modes.js")
+CANONICAL_PANEL_CSS = os.path.join(ROOT, "Feugelign_CEP", "css", "panel.css")
+
 
 
 def read(path):
@@ -96,12 +98,17 @@ def set_version(pdir, version):
 
 
 def sync_modes():
-    canon = read(CANONICAL_MODES)
+    canon_modes = read(CANONICAL_MODES)
+    canon_css = read(CANONICAL_PANEL_CSS)
     for pdir, _, _, _ in PLUGINS:
-        target = os.path.join(ROOT, pdir, "js", "modes.js")
-        if read(target) != canon:
-            write(target, canon)
+        target_modes = os.path.join(ROOT, pdir, "js", "modes.js")
+        if read(target_modes) != canon_modes:
+            write(target_modes, canon_modes)
             print("synced modes.js -> %s" % pdir)
+        target_css = os.path.join(ROOT, pdir, "css", "panel.css")
+        if read(target_css) != canon_css:
+            write(target_css, canon_css)
+            print("synced panel.css -> %s" % pdir)
 
 
 def latest_zxp(prefix, version):

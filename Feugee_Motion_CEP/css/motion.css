@@ -343,3 +343,26 @@
   transform: scale(1.15);
   border-color: #fff;
 }
+
+/* ---------------------------------------------------------
+   LIGHT THEME OVERRIDES
+   --------------------------------------------------------- */
+[data-theme="light"] .nav-section {
+  background: #e5e6eb;
+}
+
+[data-theme="light"] .curve-box,
+[data-theme="light"] .anchor-grid,
+[data-theme="light"] .color-widget {
+  background: #e6e7ec;
+}
+
+[data-theme="light"] .curve-canvas-wrap {
+  background: #ffffff;
+  border-color: var(--stroke);
+}
+
+[data-theme="light"] .curve-val-badge {
+  background: rgba(255, 255, 255, 0.9);
+}
+

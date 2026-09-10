@@ -62,6 +62,18 @@
     '<polyline points="7 10 12 15 17 10"/>' +
     '<line x1="12" y1="15" x2="12" y2="3"/></svg>';
 
+  var SVG_SUN =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="12" cy="12" r="4"/>' +
+    '<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+
+  var SVG_MOON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+
   // ---------------------------------------------------------
   // COMPACT CONTAINER
   // ---------------------------------------------------------
@@ -313,6 +325,57 @@
   box.appendChild(bFull);
   box.appendChild(bComp);
   topbar.appendChild(box);
+
+  // ---------------------------------------------------------
+  // THEME SWITCHER (DARK <-> LIGHT)
+  // ---------------------------------------------------------
+  var LS_THEME_KEY = "feugee.theme";
+
+  function getSavedTheme() {
+    try {
+      return localStorage.getItem(LS_THEME_KEY) || "dark";
+    } catch (e) {
+      return "dark";
+    }
+  }
+
+  function applyTheme(theme, save) {
+    var isLight = theme === "light";
+    document.documentElement.setAttribute("data-theme", isLight ? "light" : "dark");
+    if (document.body) {
+      document.body.setAttribute("data-theme", isLight ? "light" : "dark");
+    }
+    if (bTheme) {
+      bTheme.innerHTML = isLight ? SVG_MOON : SVG_SUN;
+      bTheme.title = isLight ? "Switch to Dark theme" : "Switch to Light theme";
+    }
+    if (save) {
+      try { localStorage.setItem(LS_THEME_KEY, isLight ? "light" : "dark"); } catch (e) {}
+    }
+    if (window.FG_CURVE && typeof window.FG_CURVE.render === "function") {
+      try { window.FG_CURVE.render(); } catch (e) {}
+    }
+  }
+
+  var bTheme = document.createElement("button");
+  bTheme.id = "btnTheme";
+  bTheme.className = "topbar-btn";
+  bTheme.title = "Toggle Light / Dark theme";
+  bTheme.innerHTML = SVG_SUN;
+  bTheme.addEventListener("click", function () {
+    var current = document.documentElement.getAttribute("data-theme") || "dark";
+    applyTheme(current === "light" ? "dark" : "light", true);
+  });
+  topbar.appendChild(bTheme);
+
+  window.addEventListener("storage", function (ev) {
+    if (ev && ev.key === LS_THEME_KEY && ev.newValue) {
+      applyTheme(ev.newValue, false);
+    }
+  });
+
+  applyTheme(getSavedTheme(), false);
+
 
   // ---------------------------------------------------------
   // EXTENSION PATH & PLUGIN INFO HELPERS
@@ -680,6 +743,74 @@
     return m ? m[1].replace("raw.githubusercontent.com", "raw").replace("cdn.jsdelivr.net", "jsdelivr") : url;
   }
 
+  // --- commit-pinned resolution (bypasses GitHub Fastly 300s cache) ------
+  var cachedCommitSha = null;
+  function getLatestCommitSha(cb) {
+    if (cachedCommitSha) return cb(cachedCommitSha);
+    var atomUrl = "https://github.com/" + REPO + "/commits/" + BRANCH + ".atom";
+    var finalUrl = atomUrl + "?_t=" + Date.now();
+
+    function parseSha(text) {
+      if (!text) return null;
+      var m = String(text).match(/commit\/([0-9a-f]{40})/i);
+      return m ? m[1] : null;
+    }
+
+    if (typeof fetch === "function") {
+      var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var timer = setTimeout(function () {
+        if (controller) { try { controller.abort(); } catch (e) {} }
+        cb(null);
+      }, 4000);
+
+      fetch(finalUrl, { cache: "no-store", signal: controller ? controller.signal : undefined })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.text();
+        })
+        .then(function (text) {
+          clearTimeout(timer);
+          var sha = parseSha(text);
+          if (sha) cachedCommitSha = sha;
+          cb(sha);
+        })
+        .catch(function () {
+          clearTimeout(timer);
+          tryXhrText(finalUrl, 3000, function (err, text) {
+            var sha = parseSha(text);
+            if (sha) cachedCommitSha = sha;
+            cb(sha);
+          });
+        });
+      return;
+    }
+    tryXhrText(finalUrl, 3000, function (err, text) {
+      var sha = parseSha(text);
+      if (sha) cachedCommitSha = sha;
+      cb(sha);
+    });
+  }
+
+  function tryXhrText(url, timeout, cb) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", url, true);
+      xhr.timeout = timeout;
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          cb(null, xhr.responseText);
+        } else {
+          cb(new Error("HTTP " + xhr.status));
+        }
+      };
+      xhr.onerror = function () { cb(new Error("network failed")); };
+      xhr.ontimeout = function () { cb(new Error("timeout")); };
+      xhr.send();
+    } catch (e) {
+      cb(e);
+    }
+  }
+
   // --- local plugin identity ---------------------------------------------
   function readLocalInfo() {
     var info = getPluginInfo();
@@ -718,7 +849,14 @@
         } catch (e) {}
       }
     }
-    cb(MANIFEST_MIRRORS);
+
+    getLatestCommitSha(function (sha) {
+      if (sha) {
+        var shaRaw = "https://raw.githubusercontent.com/" + REPO + "/" + sha + "/";
+        return cb([shaRaw + "updates.json", RAW_BASE + "updates.json", CDN_BASE + "updates.json"]);
+      }
+      cb(MANIFEST_MIRRORS);
+    });
   }
 
   // --- update check -------------------------------------------------------
@@ -769,24 +907,32 @@
   function fetchBundleJson(updateInfo, local, cb) {
     var slug = updateInfo.slug || local.slug;
     var path = "bundles/" + slug + ".json";
-    var mirrors = [RAW_BASE + path, CDN_BASE + path];
-    if (updateInfo.bundleUrl && mirrors.indexOf(updateInfo.bundleUrl) === -1) {
-      mirrors.push(updateInfo.bundleUrl);
-    }
-    tryMirrors(mirrors, TIMEOUT_BUNDLE, function (bundle) {
-      if (!bundle || !bundle.files) return "no files in bundle";
-      var keys = Object.keys(bundle.files);
-      if (!keys.length) return "bundle is empty";
-      // jsDelivr can serve a cached older copy - refuse anything stale
-      if (bundle.version && isNewerVersion(updateInfo.version, bundle.version)) {
-        return "stale copy (v" + bundle.version + ")";
+    getLatestCommitSha(function (sha) {
+      var mirrors = [];
+      if (sha) {
+        mirrors.push("https://raw.githubusercontent.com/" + REPO + "/" + sha + "/" + path);
       }
-      for (var i = 0; i < keys.length; i++) {
-        if (typeof bundle.files[keys[i]] !== "string") return "corrupt entry " + keys[i];
+      mirrors.push(RAW_BASE + path);
+      mirrors.push(CDN_BASE + path);
+      if (updateInfo.bundleUrl && mirrors.indexOf(updateInfo.bundleUrl) === -1) {
+        mirrors.push(updateInfo.bundleUrl);
       }
-      return null;
-    }, cb);
+      tryMirrors(mirrors, TIMEOUT_BUNDLE, function (bundle) {
+        if (!bundle || !bundle.files) return "no files in bundle";
+        var keys = Object.keys(bundle.files);
+        if (!keys.length) return "bundle is empty";
+        // jsDelivr can serve a cached older copy - refuse anything stale
+        if (bundle.version && isNewerVersion(updateInfo.version, bundle.version)) {
+          return "stale copy (v" + bundle.version + ")";
+        }
+        for (var i = 0; i < keys.length; i++) {
+          if (typeof bundle.files[keys[i]] !== "string") return "corrupt entry " + keys[i];
+        }
+        return null;
+      }, cb);
+    });
   }
+
 
   // --- install ------------------------------------------------------------
   function applyUpdate(updateInfo) {

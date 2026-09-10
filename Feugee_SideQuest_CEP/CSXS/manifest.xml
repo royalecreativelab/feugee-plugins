@@ -2,12 +2,12 @@
 <ExtensionManifest
   Version="6.0"
   ExtensionBundleId="com.feugee.sidequest"
-  ExtensionBundleVersion="1.5.0"
+  ExtensionBundleVersion="1.6.0"
   ExtensionBundleName="Feugee SideQuest"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <ExtensionList>
-    <Extension Id="com.feugee.sidequest.panel" Version="1.5.0" />
+    <Extension Id="com.feugee.sidequest.panel" Version="1.6.0" />
   </ExtensionList>
 
   <ExecutionEnvironment>

@@ -505,3 +505,15 @@
   color: var(--text-muted);
   font-weight: 600;
 }
+
+/* Light theme overrides for compact palette */
+[data-theme="light"] .cp-select:hover {
+  background: #eef0f5;
+}
+
+[data-theme="light"] .cp-group-center2d .cp-tile,
+[data-theme="light"] .cp-group-center3d .cp-tile {
+  border-color: #bbbcc8;
+  background: #dcdddf;
+}
+

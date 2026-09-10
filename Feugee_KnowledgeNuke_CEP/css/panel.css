@@ -663,3 +663,60 @@ body {
   color: var(--text-muted);
   margin-right: 5px;
 }
+
+/* ---------------------------------------------------------
+   LIGHT THEME
+   Scoped under [data-theme="light"]
+   --------------------------------------------------------- */
+:root[data-theme="light"],
+body[data-theme="light"] {
+  --orange:     #e85a14;
+  --orange-dim: rgba(232, 90, 20, 0.14);
+  --orange-mid: rgba(232, 90, 20, 0.32);
+  --blue:       #0d8cc9;
+  --blue-dim:   rgba(13, 140, 201, 0.14);
+  --blue-mid:   rgba(13, 140, 201, 0.32);
+  --danger:     #d73a27;
+  --danger-dim: rgba(215, 58, 39, 0.14);
+  --danger-mid: rgba(215, 58, 39, 0.32);
+
+  --bg:         #f0f1f5;
+  --card:       #ffffff;
+  --tile:       #e6e7ec;
+  --tile-hover: #dadbe2;
+  --field:      #ffffff;
+  --stroke:     #cbccd6;
+  --stroke-soft:#dcdddf;
+
+  --text:       #18181c;
+  --text-dim:   #4e4f5a;
+  --text-muted: #7c7d8c;
+}
+
+[data-theme="light"] .topbar {
+  background: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+}
+
+[data-theme="light"] .brand-logo {
+  color: #18181c;
+}
+
+[data-theme="light"] .tile.chip {
+  background: #dedfe6;
+}
+
+[data-theme="light"] .statusbar {
+  background: #e4e5ea;
+}
+
+[data-theme="light"] .content::-webkit-scrollbar-thumb,
+[data-theme="light"] .compact::-webkit-scrollbar-thumb {
+  background: #bbbcc8;
+  border-color: var(--bg);
+}
+
+[data-theme="light"] .content::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .compact::-webkit-scrollbar-thumb:hover {
+  background: #a4a5b4;
+}
+
