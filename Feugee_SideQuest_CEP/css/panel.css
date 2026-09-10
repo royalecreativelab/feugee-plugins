@@ -66,7 +66,98 @@ body {
   background: linear-gradient(180deg, #1b1b1f 0%, var(--bg) 100%);
 }
 
-.brand-logo { color: #f2f2f5; flex: 0 0 auto; }
+.brand-logo {
+  color: #f2f2f5;
+  flex: 0 0 auto;
+  cursor: pointer;
+  transform-origin: center center;
+  animation: feugeeLogoFloat 3.8s ease-in-out infinite;
+  transition: filter 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.brand-logo:hover {
+  animation: none;
+  transform: translateY(-1px) scale(1.1) rotate(-3deg);
+  filter: drop-shadow(0 2px 10px rgba(242, 99, 28, 0.45));
+}
+
+.brand-logo:active {
+  transform: scale(0.92) rotate(2deg);
+}
+
+.brand-logo.logo-pop {
+  animation: feugeeLogoClickPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Subtle periodic micro-accent on the orange & blue logo shapes */
+.brand-logo .fg-l2 {
+  transform-origin: 125px 145px;
+  animation: feugeeOrangeIdle 5.5s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.brand-logo .fg-l4 {
+  transform-origin: 165px 135px;
+  animation: feugeeBlueIdle 5.5s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.brand-logo:hover .fg-l2 {
+  animation: none;
+  transform: scale(1.18) rotate(6deg);
+}
+
+.brand-logo:hover .fg-l4 {
+  animation: none;
+  transform: scale(1.18) rotate(-6deg);
+}
+
+@keyframes feugeeLogoFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.8px);
+  }
+}
+
+@keyframes feugeeOrangeIdle {
+  0%, 75%, 100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  80% {
+    transform: translateY(-2px) scale(1.12) rotate(4deg);
+  }
+  86% {
+    transform: translateY(0.5px) scale(0.98) rotate(-1deg);
+  }
+  92% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes feugeeBlueIdle {
+  0%, 78%, 100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  83% {
+    transform: translateY(1.8px) scale(1.12) rotate(-4deg);
+  }
+  89% {
+    transform: translateY(-0.5px) scale(0.98) rotate(1deg);
+  }
+  95% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes feugeeLogoClickPop {
+  0%   { transform: scale(0.9) rotate(-6deg); }
+  45%  { transform: scale(1.22) rotate(4deg); }
+  75%  { transform: scale(0.96) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
 
 .brand-text { min-width: 0; }
 
@@ -700,6 +791,11 @@ body[data-theme="light"] {
 [data-theme="light"] .brand-logo {
   color: #18181c;
 }
+
+[data-theme="light"] .brand-logo:hover {
+  filter: drop-shadow(0 2px 10px rgba(232, 90, 20, 0.3));
+}
+
 
 [data-theme="light"] .tile.chip {
   background: #dedfe6;

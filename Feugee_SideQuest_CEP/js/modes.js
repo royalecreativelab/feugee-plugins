@@ -376,6 +376,17 @@
 
   applyTheme(getSavedTheme(), false);
 
+  // Interactive bounce on brand logo click
+  var brandLogo = document.querySelector(".brand-logo");
+  if (brandLogo) {
+    brandLogo.title = "Feugee Studio";
+    brandLogo.addEventListener("click", function () {
+      brandLogo.classList.remove("logo-pop");
+      void brandLogo.offsetWidth;
+      brandLogo.classList.add("logo-pop");
+    });
+  }
+
 
   // ---------------------------------------------------------
   // EXTENSION PATH & PLUGIN INFO HELPERS
