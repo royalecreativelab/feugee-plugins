@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-10T20:44:47Z",
+  "updatedAt": "2026-09-10T20:52:19Z",
   "plugins": {
     "knowledgenuke": {
       "slug": "knowledgenuke",
@@ -14,11 +14,11 @@
     "sidequest": {
       "slug": "sidequest",
       "name": "SideQuest",
-      "version": "1.4.1",
-      "updatedAt": "2026-09-10T20:34:04Z",
-      "changelog": "Update released",
-      "bundleUrl": "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/bundles/sidequest.json",
-      "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugee_SideQuest_v1.4.1.zxp"
+      "version": "1.4.2",
+      "updatedAt": "2026-09-10T20:52:19Z",
+      "changelog": "Release v1.4.2",
+      "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/sidequest.json",
+      "zxpUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/releases/Feugee_SideQuest_v1.4.2.zxp"
     },
     "feugelign": {
       "slug": "feugelign",
