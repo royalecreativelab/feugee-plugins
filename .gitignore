@@ -1,0 +1,12 @@
+# Private signing certificates and passwords
+*.p12
+*-password.txt
+*password*.txt
+
+# OS and debug files
+.DS_Store
+.debug
+__MACOSX/
+Thumbs.db
+staging/
+*.log

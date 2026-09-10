@@ -1,0 +1,46 @@
+/* =========================================================
+   FEUGEE SIDEQUEST  -  COLUMN LAYOUT
+   SideQuest only.
+
+   panel.css and js/modes.js are shared byte-for-byte by every Feugee plugin,
+   so nothing here touches them. Every selector sits behind .cols / .col.
+
+   Why it exists: the shared card grid aligns rows, so a short card reserves a
+   whole row and leaves a hole next to a tall one. These are plain columns -
+   js/layout.js drops each card into the shortest one, so nothing is left
+   hanging and the cards stay in reading order.
+   ========================================================= */
+
+/* [hidden] still outranks this, see panel.css */
+.content.cols {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;   /* columns stay centred once they stop growing */
+  gap: var(--gap);
+}
+
+/* A column stops growing at MAX. Without the cap a wide dock stretched each
+   card until the tiles were mostly empty space with a 9px label adrift in the
+   middle - the panel looked unfinished rather than roomy. Past the cap the
+   extra width becomes even margin on both sides instead. */
+.col {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* panel.css sets `.card { align-self: start }`. Under the shared GRID that is
+   right: it stops a short card from being stretched to the height of the tall
+   one beside it. In a flex COLUMN the cross axis is horizontal instead, so the
+   same line stops the card being stretched to the WIDTH of its column - every
+   card shrank to the width of its own content, which is why the four cards
+   measured 246 / 292 / 193 / 228px inside 420px columns and the full view
+   looked ragged with gaps that no amount of column arithmetic could close.
+   Restore the stretch here rather than editing the shared file. */
+.content.cols .card {
+  align-self: stretch;
+}

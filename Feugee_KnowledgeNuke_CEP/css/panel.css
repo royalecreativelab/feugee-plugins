@@ -1,0 +1,665 @@
+/* =========================================================
+   FEUGEE STUDIO - SHARED PANEL STYLES
+   Palette derived from the Feugee logo: #F2631C / #60B4E2 / #191919
+   Copy this file as-is into every Feugee plugin. Do not fork it per plugin.
+   ========================================================= */
+
+:root {
+  --orange:     #f2631c;
+  --orange-dim: rgba(242, 99, 28, 0.16);
+  --orange-mid: rgba(242, 99, 28, 0.38);
+  --blue:       #60b4e2;
+  --blue-dim:   rgba(96, 180, 226, 0.16);
+  --blue-mid:   rgba(96, 180, 226, 0.38);
+  --danger:     #e05a49;
+  --danger-dim: rgba(224, 90, 73, 0.16);
+  --danger-mid: rgba(224, 90, 73, 0.38);
+
+  --bg:         #161619;
+  --card:       #1e1e22;
+  --tile:       #26262c;
+  --tile-hover: #33333b;
+  --field:      #121215;
+  --stroke:     #34343d;
+  --stroke-soft:#2a2a31;
+
+  --text:       #f1f1f4;
+  --text-dim:   #b9b9c4;
+  --text-muted: #7b7b88;
+
+  --radius:     6px;
+  --gap:        8px;
+}
+
+* { box-sizing: border-box; }
+
+/* must outrank .content / .compact display:grid, otherwise hiding a view fails */
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.45 -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------
+   HEADER
+   --------------------------------------------------------- */
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid var(--stroke-soft);
+  background: linear-gradient(180deg, #1b1b1f 0%, var(--bg) 100%);
+}
+
+.brand-logo { color: #f2f2f5; flex: 0 0 auto; }
+
+.brand-text { min-width: 0; }
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--orange);
+  white-space: nowrap;
+}
+
+.brand-text p {
+  margin: 1px 0 0;
+  font-size: 10px;
+  color: var(--blue);
+  white-space: nowrap;
+}
+
+.brand-text p b {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* ---------------------------------------------------------
+   SCROLL AREA  -  this is what makes wheel scrolling work
+   Card grid: column count follows panel width smoothly instead of
+   jumping between fixed breakpoints.
+   --------------------------------------------------------- */
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: var(--gap);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(252px, 100%), 1fr));
+  gap: var(--gap);
+  align-content: start;
+}
+
+.content::-webkit-scrollbar { width: 10px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb {
+  background: #3a3a44;
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+.content::-webkit-scrollbar-thumb:hover { background: #4a4a57; }
+
+/* ---------------------------------------------------------
+   CARD
+   --------------------------------------------------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius);
+  padding: 9px 10px 11px;
+  align-self: start;
+}
+
+[data-accent="orange"] { --accent: var(--orange); --accent-dim: var(--orange-dim); --accent-mid: var(--orange-mid); }
+[data-accent="blue"]   { --accent: var(--blue);   --accent-dim: var(--blue-dim);   --accent-mid: var(--blue-mid); }
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+}
+
+.card-head .bar {
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.card-head .num {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  margin: 0 0 8px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------
+   PARAM FIELDS
+   --------------------------------------------------------- */
+.params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-bottom: 8px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.field input {
+  width: 46px;
+  padding: 3px 6px;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.2;
+  font-family: inherit;   /* shorthand cannot take `inherit` as the family */
+  text-align: center;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+/* ---------------------------------------------------------
+   TILE GRIDS
+   --------------------------------------------------------- */
+.tiles      { display: grid; gap: 5px; grid-template-columns: repeat(2, 1fr); }
+.tiles.solo { grid-template-columns: 1fr; }
+.tiles.trio { grid-template-columns: repeat(3, 1fr); }
+.tiles + .tiles { margin-top: 5px; }
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 46px;
+  padding: 7px 6px 9px;
+  background: var(--tile);
+  border: 1px solid var(--stroke);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1.1;
+  font-family: inherit;   /* shorthand cannot take `inherit` as the family */
+  letter-spacing: 0.55px;
+  text-align: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease,
+              color 0.13s ease, transform 0.08s ease;
+}
+
+.tile svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.tile span {
+  max-width: 100%;
+  /* labels may wrap to a second line rather than being cut with "..." */
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.15;
+}
+
+/* row variant: icon on the left, label on the right */
+.tile.row {
+  flex-direction: row;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 9px;
+}
+.tile.row svg { width: 15px; height: 15px; }
+.tile.row span, .tile.chip span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile.chip {
+  min-height: 26px;
+  padding: 4px 7px;
+  font-size: 8.5px;
+  background: #202026;
+  border-radius: 4px;
+}
+.tile.chip svg { width: 13px; height: 13px; }
+
+.tile.danger { --accent: var(--danger); --accent-dim: var(--danger-dim); --accent-mid: var(--danger-mid); }
+
+/* accent underline that grows on hover */
+.tile::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.17s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+.tile.chip::after { display: none; }
+
+.tile:hover {
+  background: var(--tile-hover);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tile:hover::after { transform: scaleX(1); }
+.tile:hover svg { color: var(--accent); }
+
+.tile:active { transform: translateY(1px) scale(0.985); }
+
+/* pulse on click */
+@keyframes fgPulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent-mid); background: var(--accent-dim); border-color: var(--accent); }
+  70%  { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+.tile.pulse { animation: fgPulse 0.45s cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+.tile.busy { opacity: 0.55; pointer-events: none; }
+
+.tiles.right { grid-template-columns: 1fr auto; }
+.tiles.right .spacer { display: block; }
+
+/* ---------------------------------------------------------
+   CHECKBOX
+   --------------------------------------------------------- */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  font-size: 9.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.check input { position: absolute; opacity: 0; pointer-events: none; }
+
+.check .box {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 1px solid var(--stroke);
+  border-radius: 3px;
+  background: var(--field);
+  position: relative;
+  transition: background 0.13s ease, border-color 0.13s ease;
+}
+
+.check .box::after {
+  content: "";
+  position: absolute;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+
+.check input:checked + .box { background: var(--blue); border-color: var(--blue); }
+.check input:checked + .box::after { transform: rotate(45deg) scale(1); }
+
+/* ---------------------------------------------------------
+   FOOTER
+   --------------------------------------------------------- */
+.statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--stroke-soft);
+  background: #1a1a1e;
+  font-size: 9.5px;
+  color: var(--text-dim);
+}
+
+.led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--text-muted);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.led.ok   { background: var(--orange); box-shadow: 0 0 6px var(--orange-mid); }
+.led.err  { background: var(--danger); box-shadow: 0 0 6px var(--danger-mid); }
+
+#status {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes fgFlashText {
+  0%   { color: var(--flash, var(--orange)); }
+  100% { color: var(--text-dim); }
+}
+#status.flash { animation: fgFlashText 0.85s ease-out; }
+
+#status.is-err { color: var(--danger); }
+
+/* ---------------------------------------------------------
+   SHARED COMPONENTS
+   Required in every plugin - never fork these per plugin.
+   --------------------------------------------------------- */
+
+/* .sub - small caption separating sub-groups inside one card.
+   Use when a card holds two tile groups with different roles. */
+.sub {
+  margin: 7px 0 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sub:first-of-type { margin-top: 0; }
+
+/* .tile.is-on - a tile acting as a MODE SWITCH rather than a one-shot action.
+   It differs from :hover in exactly one way: the state persists. The visual
+   language is deliberately identical to hover so there is no new vocabulary. */
+.tile.is-on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tile.is-on svg { color: var(--accent); }
+.tile.is-on::after { transform: scaleX(1); }
+.tile.chip.is-on { background: var(--accent-dim); }
+
+/* an already-on mode tile should not "press" again when re-clicked */
+.tile.is-on:active { transform: none; }
+
+/* ---------------------------------------------------------
+   VIEW MODES  -  full (cards) <-> compact (buttons only)
+   Driven by js/modes.js, which builds the compact view from
+   the full markup. No second markup tree to keep in sync.
+   --------------------------------------------------------- */
+
+/* segmented switch in the header */
+.modes {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 2px;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 5px;
+}
+
+.modes button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+
+.modes button svg { width: 13px; height: 13px; }
+.modes button:hover { color: var(--text-dim); }
+
+.modes button.on {
+  background: var(--tile-hover);
+  color: var(--orange);
+}
+
+/* reload & update buttons in topbar */
+.topbar-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: 4px;
+  flex: 0 0 auto;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease, transform 0.1s ease;
+}
+
+.topbar-btn svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.topbar-btn:hover {
+  background: var(--tile-hover);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+#btnReload:hover svg {
+  transform: rotate(90deg);
+}
+
+#btnUpdate:hover svg {
+  transform: translateY(1.5px);
+}
+
+.topbar-btn:active {
+  transform: translateY(1px) scale(0.95);
+}
+
+.topbar-btn.is-spinning svg,
+.topbar-btn.is-updating svg {
+  animation: topbarSpin 0.75s linear infinite !important;
+}
+
+@keyframes topbarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* orange dot notification badge when update is available */
+.topbar-btn.has-update {
+  border-color: var(--orange-dim);
+  color: var(--text);
+}
+
+.topbar-btn.has-update::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  border: 1.5px solid var(--bg);
+  border-radius: 50%;
+  box-shadow: 0 0 5px var(--orange);
+  animation: updatePulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes updatePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 4px var(--orange);
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.85;
+    box-shadow: 0 0 8px var(--orange);
+  }
+}
+
+/* compact container - same scroll behaviour as .content */
+.compact {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: var(--gap);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(188px, 100%), 1fr));
+  gap: 5px;
+  align-content: start;
+}
+
+.compact::-webkit-scrollbar { width: 10px; }
+.compact::-webkit-scrollbar-track { background: transparent; }
+.compact::-webkit-scrollbar-thumb {
+  background: #3a3a44;
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+.compact::-webkit-scrollbar-thumb:hover { background: #4a4a57; }
+
+/* A compact tile is a .tile.row, so it inherits every hover / pulse /
+   active / danger rule already defined above. .ctile only adds the
+   inline property chips. */
+.ctile {
+  min-height: 30px;
+  padding: 4px 6px 4px 8px;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.ctile span {
+  flex: 1 1 auto;
+  text-align: left;
+  min-width: 0;
+}
+
+.ctile::after { display: none; }
+
+/* inline editable properties, right-aligned inside the button */
+.cvals {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  align-items: center;
+}
+
+.cval {
+  width: 27px;
+  padding: 2px 3px;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 3px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1.2;
+  font-family: inherit;   /* shorthand cannot take `inherit` as the family */
+  text-align: center;
+  outline: none;
+  cursor: text;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+
+.cval:hover  { border-color: var(--accent); }
+.cval:focus  { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+
+/* checkbox rendered as a tiny square toggle on the button */
+.cchk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  border: 1px solid var(--stroke);
+  border-radius: 3px;
+  background: var(--field);
+  color: transparent;
+  transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease;
+}
+
+.cchk svg { width: 9px; height: 9px; }
+
+.cchk.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* card-name prefix, added only to compact labels that would otherwise collide */
+.cgrp {
+  font-weight: 700;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-right: 5px;
+}

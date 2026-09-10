@@ -1,0 +1,507 @@
+/* =========================================================
+   FEUGELIGN - ULTRA-COMPACT PALETTE STYLES (RESPONSIVE)
+   Designed for fast, high-density workflow in After Effects.
+   Fully fluid: scales seamlessly from narrow to wide panel widths.
+   Scoped under #compact and .compact-palette.
+   ========================================================= */
+
+#compact.compact,
+#compact {
+  padding: 8px 10px 12px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px;
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.compact-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Sections */
+.cp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Rows */
+.cp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cp-header-row {
+  justify-content: space-between;
+}
+
+.cp-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Select Dropdown */
+.cp-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 130px;
+  max-width: 220px;
+}
+
+.cp-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 23px;
+  padding: 0 22px 0 8px;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+
+.cp-select:hover {
+  border-color: var(--blue);
+  background: #19191e;
+}
+
+.cp-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-dim);
+}
+
+.cp-chevron {
+  position: absolute;
+  right: 6px;
+  width: 11px;
+  height: 11px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Checkboxes */
+.cp-checks-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.cp-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.13s ease;
+  white-space: nowrap;
+}
+
+.cp-check:hover {
+  color: var(--text-dim);
+}
+
+.cp-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.cp-box {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 3px;
+  flex: 0 0 auto;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+
+.cp-box svg {
+  width: 9px;
+  height: 9px;
+  stroke: transparent;
+  stroke-width: 3.5;
+  transition: stroke 0.13s ease;
+}
+
+.cp-check input:checked + .cp-box {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.cp-check input:checked + .cp-box svg {
+  stroke: #fff;
+}
+
+.cp-check input:focus-visible + .cp-box {
+  box-shadow: 0 0 0 2px var(--blue-dim);
+}
+
+/* =========================================================
+   ALIGN MATRIX (FULLY RESPONSIVE FLUID 7-COLUMN GRID)
+   ========================================================= */
+.cp-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 5px;
+  padding: 5px 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cp-grid-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.cp-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cp-group-h {
+  flex: 3 1 0;
+}
+
+.cp-group-center2d {
+  flex: 1 1 0;
+  margin: 0 1px;
+}
+
+.cp-group-v {
+  flex: 3 1 0;
+}
+
+.cp-group-z {
+  flex: 3 1 0;
+}
+
+.cp-group-center3d {
+  flex: 1 1 0;
+  margin: 0 1px;
+}
+
+.cp-group-spacer {
+  flex: 3 1 0;
+  display: flex;
+  gap: 3px;
+}
+
+/* Fluid Matrix Tile Buttons */
+.cp-matrix .cp-tile {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 22px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tile);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+}
+
+.cp-matrix .cp-tile svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.cp-matrix .cp-tile::after {
+  display: none !important;
+}
+
+.cp-matrix .cp-tile:hover {
+  background: var(--tile-hover);
+  border-color: var(--orange);
+  color: var(--text);
+}
+
+.cp-matrix .cp-tile:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+.cp-matrix .cp-tile.is-on {
+  background: var(--orange-dim);
+  border-color: var(--orange);
+  color: var(--orange);
+  box-shadow: inset 0 0 0 1px rgba(242, 99, 28, 0.25);
+}
+
+/* Blue accent for 3D depth items */
+.cp-group-z .cp-tile:hover,
+.cp-group-center3d .cp-tile:hover {
+  border-color: var(--blue);
+}
+
+.cp-group-z .cp-tile.is-on,
+.cp-group-center3d .cp-tile.is-on {
+  background: var(--blue-dim);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+/* Center 2D / 3D special visual prominence */
+.cp-group-center2d .cp-tile,
+.cp-group-center3d .cp-tile {
+  border-color: #3f3f4c;
+  background: #23232a;
+}
+
+/* =========================================================
+   ALIGN TO ROW
+   ========================================================= */
+.cp-to-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding-top: 2px;
+}
+
+.cp-to-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-to-buttons {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cp-to-buttons .cp-tile {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tile);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.cp-to-buttons .cp-tile svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.cp-to-buttons .cp-tile:hover {
+  background: var(--tile-hover);
+  border-color: var(--orange);
+  color: var(--text);
+}
+
+.cp-to-buttons .cp-tile.is-on {
+  background: var(--orange-dim);
+  border-color: var(--orange);
+  color: var(--orange);
+  box-shadow: inset 0 0 0 1px rgba(242, 99, 28, 0.25);
+}
+
+/* Safe chips */
+.cp-safe-chips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  transition: opacity 0.15s ease;
+}
+
+.cp-safe-chips.is-hidden {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cp-safe-chips .chip {
+  min-height: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-size: 8px;
+  letter-spacing: 0.4px;
+}
+
+/* Divider */
+.cp-divider {
+  border: 0;
+  border-top: 1px solid var(--stroke-soft);
+  margin: 3px 0 2px;
+  width: 100%;
+}
+
+/* Distribute mode chips (GAP vs CTR) */
+.cp-dm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.cp-dm-toggle .chip {
+  min-height: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-size: 8.5px;
+}
+
+/* =========================================================
+   DISTRIBUTE TOOL ROW
+   ========================================================= */
+.cp-dist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.cp-dist-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  max-width: 240px;
+}
+
+.cp-dist-buttons .cp-tile {
+  flex: 1 1 0;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tile);
+  border: 1px solid var(--stroke);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.cp-dist-buttons .cp-tile svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.cp-dist-buttons .cp-tile:hover {
+  background: var(--tile-hover);
+  border-color: var(--orange);
+  color: var(--text);
+}
+
+.cp-dist-buttons .cp-tile:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+/* Fixed Spacing Group */
+.cp-fixed-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex: 0 0 auto;
+  transition: border-color 0.13s ease;
+}
+
+.cp-fixed-group.is-active {
+  border-color: var(--blue);
+  background: rgba(96, 180, 226, 0.08);
+}
+
+.cp-fixed-check {
+  margin: 0;
+}
+
+.cp-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cp-input {
+  width: 38px;
+  height: 20px;
+  padding: 0 3px;
+  background: var(--field);
+  border: 1px solid var(--stroke);
+  border-radius: 3px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 10px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+
+.cp-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px var(--blue-dim);
+}
+
+.cp-unit {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-weight: 600;
+}

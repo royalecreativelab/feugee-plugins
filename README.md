@@ -7,6 +7,7 @@ Official CEP Extension suite for Adobe After Effects by **Feugee Studio**.
 | **Knowledge Nuke** | `v3.1.1` | Explainer & Motion Design Toolkit | [Download ZXP](releases/Feugee_KnowledgeNuke_v3.1.1.zxp) |
 | **SideQuest** | `v1.4.1` | Fast Animation Presets & Keyframe Rig | [Download ZXP](releases/Feugee_SideQuest_v1.4.1.zxp) |
 | **Feugelign** | `v1.2.0` | Parenting-Aware 2D & 3D Align + Distribute | [Download ZXP](releases/Feugelign_v1.2.0.zxp) |
+| **Feugee Motion** | `v1.0.0` | Curve Editor, Motion Tools & Presets | [Download ZXP](releases/Feugee_Motion_v1.0.0.zxp) |
 
 ---
 
