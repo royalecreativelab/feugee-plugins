@@ -1256,8 +1256,58 @@
   try { saved = localStorage.getItem(LS_KEY) || "full"; } catch (e) {}
   apply(saved === "compact" ? "compact" : "full", false);
 
+  // ---------------------------------------------------------
+  // INTRO SPLASH ANIMATION
+  // Elegant logo intro on panel launch
+  // ---------------------------------------------------------
+  function initSplash() {
+    try {
+      var brandLogo = document.querySelector(".brand-logo");
+      if (!brandLogo || !document.body) return;
+
+      var pluginInfo = getPluginInfo();
+      var displayName = pluginInfo.name || "Plugin";
+      if (displayName.toLowerCase() === "motion") displayName = "Feugee Motion";
+
+      var splash = document.createElement("div");
+      splash.id = "feugeeSplash";
+      splash.className = "feugee-splash";
+
+      var wrap = document.createElement("div");
+      wrap.className = "splash-content";
+
+      var logoClone = brandLogo.cloneNode(true);
+      logoClone.setAttribute("class", "splash-logo");
+      logoClone.removeAttribute("width");
+      logoClone.removeAttribute("height");
+
+      var title = document.createElement("div");
+      title.className = "splash-title";
+      title.innerHTML = '<h2>FEUGEE STUDIO</h2><p>' + displayName + ' <span>v' + pluginInfo.version + '</span></p>';
+
+      wrap.appendChild(logoClone);
+      wrap.appendChild(title);
+      splash.appendChild(wrap);
+      document.body.appendChild(splash);
+
+      function dismiss() {
+        if (splash.classList.contains("is-leaving")) return;
+        splash.classList.add("is-leaving");
+        setTimeout(function () {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 360);
+      }
+
+      splash.addEventListener("click", dismiss);
+      setTimeout(dismiss, 1350);
+    } catch (e) {}
+  }
+
+  initSplash();
+
   // Background check for updates (silent)
   setTimeout(function () {
     checkForUpdates(true);
   }, 900);
 })();
+

@@ -2,12 +2,12 @@
 <ExtensionManifest
   Version="6.0"
   ExtensionBundleId="com.feugee.motion"
-  ExtensionBundleVersion="1.2.0"
+  ExtensionBundleVersion="1.2.1"
   ExtensionBundleName="Feugee Motion"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <ExtensionList>
-    <Extension Id="com.feugee.motion.panel" Version="1.2.0" />
+    <Extension Id="com.feugee.motion.panel" Version="1.2.1" />
   </ExtensionList>
 
   <ExecutionEnvironment>
