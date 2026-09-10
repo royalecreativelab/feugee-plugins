@@ -166,6 +166,7 @@
   // ---------------------------------------------------------
   compact.innerHTML =
     '<div class="compact-palette">' +
+      '<div style="padding: 7px 10px; margin-bottom: 8px; background: rgba(242, 99, 28, 0.16); border: 1px solid var(--orange); border-radius: 5px; color: var(--orange); font-weight: 700; font-size: 11px; text-align: center; letter-spacing: 1px;">ATHA ANYING</div>' +
       '<!-- ALIGN SECTION -->' +
       '<div class="cp-section">' +
         '<div class="cp-row cp-header-row">' +
