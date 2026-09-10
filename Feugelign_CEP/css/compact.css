@@ -508,12 +508,22 @@
 
 /* Light theme overrides for compact palette */
 [data-theme="light"] .cp-select:hover {
-  background: #eef0f5;
+  background: #faede4;
 }
 
 [data-theme="light"] .cp-group-center2d .cp-tile,
 [data-theme="light"] .cp-group-center3d .cp-tile {
-  border-color: #bbbcc8;
-  background: #dcdddf;
+  border-color: #d4ae97;
+  background: #ecd3c1;
+}
+
+[data-theme="light"] .cp-matrix {
+  background: var(--card);
+  border-color: var(--stroke-soft);
+}
+
+[data-theme="light"] .cp-fixed-group {
+  background: var(--card);
+  border-color: var(--stroke-soft);
 }
 

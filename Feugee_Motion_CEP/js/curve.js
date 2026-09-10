@@ -80,7 +80,7 @@
 
     // Grid lines
     ctx.lineWidth = 1;
-    ctx.strokeStyle = isLight ? "#e5e6eb" : "#1b1b22";
+    ctx.strokeStyle = isLight ? "#ebd3c2" : "#1b1b22";
     for (var i = 0; i <= 4; i++) {
       var gx = pad + (plotW / 4) * i;
       var gy = pad + (plotH / 4) * i;
@@ -96,7 +96,7 @@
     }
 
     // Diagonal reference
-    ctx.strokeStyle = isLight ? "#d0d1db" : "#24242d";
+    ctx.strokeStyle = isLight ? "#dcbca6" : "#24242d";
     ctx.beginPath();
     ctx.moveTo(pad, height - pad);
     ctx.lineTo(width - pad, pad);
@@ -130,8 +130,8 @@
     ctx.stroke();
 
     // End points
-    drawPoint(p0, isLight ? "#9a9aa6" : "#7b7b88", 3);
-    drawPoint(p3, isLight ? "#9a9aa6" : "#7b7b88", 3);
+    drawPoint(p0, isLight ? "#96674f" : "#7b7b88", 3);
+    drawPoint(p3, isLight ? "#96674f" : "#7b7b88", 3);
 
     // Control point handles
     drawHandle(p1, "#f2631c", draggingHandle === 1);

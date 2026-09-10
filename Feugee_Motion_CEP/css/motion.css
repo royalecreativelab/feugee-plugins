@@ -348,21 +348,24 @@
    LIGHT THEME OVERRIDES
    --------------------------------------------------------- */
 [data-theme="light"] .nav-section {
-  background: #e5e6eb;
+  background: #f4dcd0;
+  border-bottom: 1px solid var(--stroke-soft);
 }
 
 [data-theme="light"] .curve-box,
 [data-theme="light"] .anchor-grid,
 [data-theme="light"] .color-widget {
-  background: #e6e7ec;
+  background: #f7e2d5;
+  border-color: var(--stroke-soft);
 }
 
 [data-theme="light"] .curve-canvas-wrap {
-  background: #ffffff;
+  background: #fff8f4;
   border-color: var(--stroke);
 }
 
 [data-theme="light"] .curve-val-badge {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 247, 242, 0.92);
+  border-color: var(--stroke-soft);
 }
 
