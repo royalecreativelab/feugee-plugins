@@ -376,14 +376,17 @@
 
   applyTheme(getSavedTheme(), false);
 
-  // Interactive bounce on brand logo click
+  // Interactive bounce on brand logo click & open Instagram
+  var INSTAGRAM_URL = "https://www.instagram.com/feug.feugee/";
   var brandLogo = document.querySelector(".brand-logo");
   if (brandLogo) {
-    brandLogo.title = "Feugee Studio";
-    brandLogo.addEventListener("click", function () {
+    brandLogo.title = "Feugee Studio (@feug.feugee) - Click to open Instagram";
+    brandLogo.addEventListener("click", function (e) {
+      if (e) e.preventDefault();
       brandLogo.classList.remove("logo-pop");
       void brandLogo.offsetWidth;
       brandLogo.classList.add("logo-pop");
+      openExternal(INSTAGRAM_URL);
     });
   }
 
@@ -1134,6 +1137,12 @@
     try {
       if (typeof window.cep !== "undefined" && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
         window.cep.util.openURLInDefaultBrowser(url);
+        return;
+      }
+    } catch (e) {}
+    try {
+      if (typeof window.__adobe_cep__ !== "undefined" && window.__adobe_cep__.openURLInDefaultBrowser) {
+        window.__adobe_cep__.openURLInDefaultBrowser(url);
         return;
       }
     } catch (e) {}
