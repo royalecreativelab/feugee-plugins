@@ -413,9 +413,9 @@
   // Multi-mirror: jsDelivr CDN (primary) -> raw GitHub -> GitHub API
   // ---------------------------------------------------------
   var MANIFEST_MIRRORS = [
-    "https://api.github.com/repos/royalecreativelab/feugee-plugins/contents/updates.json",
+    "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/updates.json",
     "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/updates.json",
-    "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/updates.json"
+    "https://api.github.com/repos/royalecreativelab/feugee-plugins/contents/updates.json"
   ];
 
   var pendingUpdate = null;
