@@ -466,7 +466,7 @@
 
   function fetchSingleJson(url, cb) {
     var isGhApi = url.indexOf("api.github.com") !== -1;
-    var finalUrl = isGhApi ? url : (url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now());
+    var finalUrl = url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now();
     var fetchHeaders = isGhApi ? { "Accept": "application/vnd.github.raw" } : {};
 
     var called = false;
