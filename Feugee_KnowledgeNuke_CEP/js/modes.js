@@ -408,67 +408,201 @@
   }
 
   // ---------------------------------------------------------
-  // AUTO-UPDATE SYSTEM
-  // Checks remote manifest, shows orange dot, syncs files in-place
-  // Multi-mirror: jsDelivr CDN (primary) -> raw GitHub -> GitHub API
+  // FEUGEE AUTO-UPDATE v2 - live in-place installer
+  //
+  // What changed vs v1 (and why it failed on other machines):
+  //  - GitHub API mirror dropped. 60 req/hour per IP, so a studio
+  //    sharing one connection gets HTTP 403 and every fetch dies.
+  //  - Write access is probed BEFORE downloading. A ZXP installed
+  //    system-wide (/Library/... or Program Files) is not writable
+  //    by After Effects, which is what silently killed the install.
+  //  - Files are backed up in memory, written, then read back and
+  //    compared. Any mismatch rolls everything back, so a failed
+  //    update can no longer leave half a plugin on disk.
+  //  - After patching, the ZXP signature no longer matches, so the
+  //    installer drops signatures.xml, writes .debug and turns on
+  //    PlayerDebugMode. Without that the panel would refuse to load
+  //    on the next After Effects launch.
+  //  - Every step is logged to feugee-update.log next to the plugin.
+  //    Alt+click the update button to dump diagnostics and open it.
   // ---------------------------------------------------------
-  var MANIFEST_MIRRORS = [
-    "https://api.github.com/repos/royalecreativelab/feugee-plugins/contents/updates.json",
-    "https://cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/updates.json",
-    "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/updates.json"
-  ];
+  var REPO = "royalecreativelab/feugee-plugins";
+  var BRANCH = "main";
+  var RAW_BASE = "https://raw.githubusercontent.com/" + REPO + "/" + BRANCH + "/";
+  var CDN_BASE = "https://cdn.jsdelivr.net/gh/" + REPO + "@" + BRANCH + "/";
+  var REPAIR_PAGE = "https://github.com/" + REPO + "#repair--reinstall";
+
+  var MANIFEST_MIRRORS = [RAW_BASE + "updates.json", CDN_BASE + "updates.json"];
+
+  var SLUG_BY_BUNDLE = {
+    "com.feugee.feugelign": "feugelign",
+    "com.feugee.knowledgenuke": "knowledgenuke",
+    "com.feugee.sidequest": "sidequest",
+    "com.feugee.motion": "feugeemotion"
+  };
+
+  var TIMEOUT_MANIFEST = 12000;
+  var TIMEOUT_BUNDLE = 45000;
 
   var pendingUpdate = null;
+  var LOG = [];
+  var lastFailure = "";
 
-  function getManifestUrls(cb) {
-    var custom = "";
-    try { custom = localStorage.getItem("feugee.manifest_url"); } catch (e) {}
-    if (custom) return cb([custom]);
+  function log(msg) {
+    var line = "[" + new Date().toISOString() + "] " + msg;
+    LOG.push(line);
+    try { console.log("[feugee-update] " + msg); } catch (e) {}
+  }
 
-    var extPath = getExtPath();
-    if (extPath) {
+  // --- ExtendScript bridge -----------------------------------------------
+  function es(script, cb) {
+    if (typeof window.__adobe_cep__ === "undefined" ||
+        typeof window.__adobe_cep__.evalScript !== "function") {
+      return cb("ERR|No ExtendScript bridge");
+    }
+    try {
+      window.__adobe_cep__.evalScript(script, function (r) {
+        cb(typeof r === "string" ? r : String(r));
+      });
+    } catch (e) {
+      cb("ERR|" + e.message);
+    }
+  }
+
+  function esStr(s) {
+    return String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  }
+
+  // --- filesystem ---------------------------------------------------------
+  function cepRead(path) {
+    try {
+      if (typeof window.cep !== "undefined" && window.cep.fs) {
+        var r = window.cep.fs.readFile(path);
+        if (r && r.err === 0) return r.data;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function cepWrite(path, content) {
+    try {
+      if (typeof window.cep !== "undefined" && window.cep.fs) {
+        var r = window.cep.fs.writeFile(path, content);
+        return !!(r && r.err === 0);
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function cepDelete(path) {
+    try {
+      if (typeof window.cep !== "undefined" && window.cep.fs) {
+        window.cep.fs.deleteFile(path);
+      }
+    } catch (e) {}
+  }
+
+  function mkdirp(dir, cb) {
+    if (!dir) return cb(null);
+    if (typeof window.cep !== "undefined" && window.cep.fs) {
       try {
-        if (typeof window.cep !== "undefined" && window.cep.fs) {
-          var res = window.cep.fs.readFile(extPath + "/feugee-update-config.json");
-          if (res.err === 0 && res.data) {
-            var cfg = JSON.parse(res.data);
-            if (cfg && cfg.manifestUrl) return cb([cfg.manifestUrl]);
-          }
+        var parts = dir.split("/");
+        var cur = "";
+        for (var i = 0; i < parts.length; i++) {
+          cur += (i === 0 && parts[i] === "" ? "" : "/") + parts[i];
+          if (cur && cur !== "/") window.cep.fs.makedir(cur);
         }
       } catch (e) {}
     }
-
-    cb(MANIFEST_MIRRORS);
-  }
-
-  function fetchJson(url, cb) {
-    var mirrors = [url];
-    if (url.indexOf("raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/") !== -1) {
-      mirrors.unshift(url.replace("raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/", "cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/"));
-    } else if (url.indexOf("cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/") !== -1) {
-      mirrors.push(url.replace("cdn.jsdelivr.net/gh/royalecreativelab/feugee-plugins@main/", "raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/"));
-    }
-
-    tryMirrors(mirrors, 0, cb);
-  }
-
-  function tryMirrors(urls, idx, cb) {
-    if (idx >= urls.length) {
-      return cb(new Error("All mirrors failed"));
-    }
-    fetchSingleJson(urls[idx], function (err, data) {
-      if (!err && data) {
-        return cb(null, data);
-      }
-      tryMirrors(urls, idx + 1, cb);
+    var script = '(function(){try{' +
+      'var f=new Folder("' + esStr(dir) + '");' +
+      'if(f.exists) return "OK";' +
+      'var stack=[],cur=f;' +
+      'while(cur && !cur.exists){stack.push(cur);cur=cur.parent;}' +
+      'for(var i=stack.length-1;i>=0;i--){if(!stack[i].create()) return "ERR|mkdir failed: "+stack[i].fsName;}' +
+      'return "OK";}catch(e){return "ERR|"+e.toString();}})()';
+    es(script, function (res) {
+      cb(res && res.indexOf("OK") === 0 ? null : new Error(res || "mkdir failed"));
     });
   }
 
-  function fetchSingleJson(url, cb) {
-    var isGhApi = url.indexOf("api.github.com") !== -1;
-    var finalUrl = isGhApi ? url : (url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now());
-    var fetchHeaders = isGhApi ? { "Accept": "application/vnd.github.raw" } : {};
+  // Splits without cutting a surrogate pair in half - encodeURIComponent
+  // throws URIError on a lone surrogate and that used to kill the write.
+  function safeChunks(content, size) {
+    var out = [];
+    var i = 0;
+    while (i < content.length) {
+      var end = Math.min(i + size, content.length);
+      var code = content.charCodeAt(end - 1);
+      if (end < content.length && code >= 0xd800 && code <= 0xdbff) end--;
+      out.push(content.substring(i, end));
+      i = end;
+    }
+    if (!out.length) out.push("");
+    return out;
+  }
 
+  function esWrite(path, content, cb) {
+    var chunks = safeChunks(content, 6000);
+    function step(idx) {
+      if (idx >= chunks.length) return cb(null);
+      var payload;
+      try { payload = encodeURIComponent(chunks[idx]); }
+      catch (e) { return cb(new Error("encode failed: " + e.message)); }
+      var script = '(function(){try{' +
+        'var f=new File("' + esStr(path) + '");' +
+        'f.encoding="UTF-8";f.lineFeed="Unix";' +
+        'if(!f.open("' + (idx === 0 ? "w" : "a") + '")) return "ERR|open failed (' + (idx === 0 ? "w" : "a") + ')";' +
+        'f.write(decodeURIComponent("' + payload + '"));' +
+        'f.close();return "OK";' +
+        '}catch(e){return "ERR|"+e.toString();}})()';
+      es(script, function (res) {
+        if (res && res.indexOf("OK") === 0) return step(idx + 1);
+        cb(new Error(res || "ExtendScript write failed"));
+      });
+    }
+    step(0);
+  }
+
+  // cep.fs first (sync, fast), ExtendScript as fallback, read-back either way.
+  function writeVerified(path, content, cb) {
+    var dir = path.substring(0, path.lastIndexOf("/"));
+    mkdirp(dir, function () {
+      if (cepWrite(path, content) && cepRead(path) === content) {
+        return cb(null, "cep.fs");
+      }
+      esWrite(path, content, function (err) {
+        if (err) return cb(err);
+        var back = cepRead(path);
+        if (back !== null && back !== content) {
+          return cb(new Error("verify mismatch (" + (back ? back.length : 0) + "/" + content.length + " chars)"));
+        }
+        cb(null, "extendscript");
+      });
+    });
+  }
+
+  function probeWritable(extPath, cb) {
+    var probe = extPath + "/.feugee-write-test";
+    var stamp = "feugee " + Date.now();
+    if (cepWrite(probe, stamp) && cepRead(probe) === stamp) {
+      cepDelete(probe);
+      return cb(true, "cep.fs");
+    }
+    var script = '(function(){try{' +
+      'var f=new File("' + esStr(probe) + '");' +
+      'if(!f.open("w")) return "ERR|open denied";' +
+      'f.write("' + stamp + '");f.close();f.remove();return "OK";' +
+      '}catch(e){return "ERR|"+e.toString();}})()';
+    es(script, function (res) {
+      if (res && res.indexOf("OK") === 0) return cb(true, "extendscript");
+      cb(false, res || "no filesystem api");
+    });
+  }
+
+  // --- network ------------------------------------------------------------
+  function fetchSingleJson(url, timeout, cb) {
+    var finalUrl = url + (url.indexOf("?") === -1 ? "?" : "&") + "_t=" + Date.now();
     var called = false;
     function safeCb(err, data) {
       if (called) return;
@@ -478,225 +612,433 @@
 
     if (typeof fetch === "function") {
       var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      var timeoutId = setTimeout(function () {
-        if (controller) {
-          try { controller.abort(); } catch (e) {}
-        }
-        safeCb(new Error("Timeout (fetch)"));
-      }, 4500);
+      var timer = setTimeout(function () {
+        if (controller) { try { controller.abort(); } catch (e) {} }
+        safeCb(new Error("timeout " + timeout + "ms"));
+      }, timeout);
 
-      var opts = { cache: "no-store", headers: fetchHeaders };
+      var opts = { cache: "no-store" };
       if (controller) opts.signal = controller.signal;
 
       fetch(finalUrl, opts)
         .then(function (res) {
-          clearTimeout(timeoutId);
           if (!res.ok) throw new Error("HTTP " + res.status);
           return res.json();
         })
-        .then(function (data) {
-          clearTimeout(timeoutId);
-          safeCb(null, data);
-        })
-        .catch(function () {
-          clearTimeout(timeoutId);
-          tryXhr(finalUrl, safeCb);
+        .then(function (data) { clearTimeout(timer); safeCb(null, data); })
+        .catch(function (e) {
+          clearTimeout(timer);
+          if (called) return;
+          tryXhr(finalUrl, timeout, safeCb);
         });
       return;
     }
-
-    tryXhr(finalUrl, safeCb);
+    tryXhr(finalUrl, timeout, safeCb);
   }
 
-  function tryXhr(url, cb) {
+  function tryXhr(url, timeout, cb) {
     try {
       var xhr = new XMLHttpRequest();
       xhr.open("GET", url, true);
-      xhr.timeout = 4500;
+      xhr.timeout = timeout;
       xhr.onload = function () {
         if (xhr.status >= 200 && xhr.status < 300) {
-          try { cb(null, JSON.parse(xhr.responseText)); } catch (e) { cb(e); }
+          try { cb(null, JSON.parse(xhr.responseText)); }
+          catch (e) { cb(new Error("bad JSON: " + e.message)); }
         } else {
           cb(new Error("HTTP " + xhr.status));
         }
       };
-      xhr.onerror = function () { cb(new Error("Network failed")); };
-      xhr.ontimeout = function () { cb(new Error("Timeout (XHR)")); };
+      xhr.onerror = function () { cb(new Error("network failed")); };
+      xhr.ontimeout = function () { cb(new Error("timeout " + timeout + "ms")); };
       xhr.send();
     } catch (e) {
       cb(e);
     }
   }
 
-  function writeExtensionFile(fullPath, content, cb) {
-    var normPath = fullPath.replace(/\\/g, "/");
-    var dir = normPath.substring(0, normPath.lastIndexOf("/"));
-
-    // 1. window.cep.fs
-    if (typeof window.cep !== "undefined" && window.cep.fs) {
-      try {
-        if (dir) {
-          var parts = dir.split("/");
-          var cur = "";
-          for (var i = 0; i < parts.length; i++) {
-            cur += (i === 0 && parts[i] === "" ? "" : "/") + parts[i];
-            if (cur && cur !== "/") window.cep.fs.makedir(cur);
-          }
+  function tryMirrors(urls, timeout, validate, cb) {
+    var errors = [];
+    function next(i) {
+      if (i >= urls.length) return cb(new Error(errors.join(" | ") || "all mirrors failed"));
+      fetchSingleJson(urls[i], timeout, function (err, data) {
+        if (!err && data) {
+          var bad = validate ? validate(data) : null;
+          if (!bad) { log("fetched " + urls[i]); return cb(null, data); }
+          err = new Error(bad);
         }
-        var res = window.cep.fs.writeFile(normPath, content);
-        if (res.err === 0) return cb(null);
-      } catch (e) {}
-    }
-
-    // 2. ExtendScript File write
-    if (typeof window.__adobe_cep__ !== "undefined" && typeof window.__adobe_cep__.evalScript === "function") {
-      var encoded = encodeURIComponent(content);
-      var script = '(function() {' +
-        'try {' +
-          'var f = new File("' + normPath + '");' +
-          'var d = f.parent;' +
-          'if (!d.exists) d.create();' +
-          'f.encoding = "UTF-8";' +
-          'if (!f.open("w")) return "ERR|Open failed";' +
-          'f.write(decodeURIComponent("' + encoded + '"));' +
-          'f.close();' +
-          'return "OK";' +
-        '} catch(e) { return "ERR|" + e.toString(); }' +
-      '})()';
-      window.__adobe_cep__.evalScript(script, function (jsxRes) {
-        if (jsxRes && jsxRes.indexOf("OK") === 0) cb(null);
-        else cb(new Error(jsxRes || "ExtendScript write failed"));
+        errors.push(shortHost(urls[i]) + ": " + err.message);
+        log("mirror failed " + urls[i] + " -> " + err.message);
+        next(i + 1);
       });
-      return;
     }
-
-    cb(new Error("No filesystem API available"));
+    next(0);
   }
 
+  function shortHost(url) {
+    var m = String(url).match(/^https?:\/\/([^\/]+)/);
+    return m ? m[1].replace("raw.githubusercontent.com", "raw").replace("cdn.jsdelivr.net", "jsdelivr") : url;
+  }
+
+  // --- local plugin identity ---------------------------------------------
+  function readLocalInfo() {
+    var info = getPluginInfo();
+    var extPath = getExtPath();
+    var xml = extPath ? cepRead(extPath + "/CSXS/manifest.xml") : null;
+    if (xml) {
+      var mB = xml.match(/ExtensionBundleId="([^"]+)"/);
+      var mV = xml.match(/ExtensionBundleVersion="([^"]+)"/);
+      var mE = xml.match(/<Extension\s+Id="([^"]+)"/);
+      if (mB) {
+        info.bundleId = mB[1];
+        if (SLUG_BY_BUNDLE[mB[1]]) info.slug = SLUG_BY_BUNDLE[mB[1]];
+      }
+      if (mV) info.version = mV[1];
+      if (mE) info.extensionId = mE[1];
+    }
+    if (!info.bundleId) {
+      info.bundleId = "com.feugee." + (info.slug === "feugeemotion" ? "motion" : info.slug);
+    }
+    if (!info.extensionId) info.extensionId = info.bundleId + ".panel";
+    return info;
+  }
+
+  function getManifestUrls(cb) {
+    var custom = "";
+    try { custom = localStorage.getItem("feugee.manifest_url"); } catch (e) {}
+    if (custom) return cb([custom]);
+
+    var extPath = getExtPath();
+    if (extPath) {
+      var raw = cepRead(extPath + "/feugee-update-config.json");
+      if (raw) {
+        try {
+          var cfg = JSON.parse(raw);
+          if (cfg && cfg.manifestUrl) return cb([cfg.manifestUrl]);
+        } catch (e) {}
+      }
+    }
+    cb(MANIFEST_MIRRORS);
+  }
+
+  // --- update check -------------------------------------------------------
   function checkForUpdates(silent, cb) {
-    try {
-      var pInfo = getPluginInfo();
-      var bUp = document.getElementById("btnUpdate");
+    var local = readLocalInfo();
+    var bUp = document.getElementById("btnUpdate");
+    log("check " + local.slug + " v" + local.version);
 
-      getManifestUrls(function (mirrors) {
-        tryMirrors(mirrors, 0, function (err, data) {
-          if (err || !data || !data.plugins) {
-            if (!silent) setPluginStatus("Update check failed (" + (err ? err.message : "server offline") + ")", "var(--red)");
-            if (cb) cb(err);
-            return;
-          }
+    getManifestUrls(function (mirrors) {
+      tryMirrors(mirrors, TIMEOUT_MANIFEST, function (d) {
+        return d && d.plugins ? null : "manifest has no plugins";
+      }, function (err, data) {
+        if (err) {
+          if (!silent) setPluginStatus("Update check failed (" + err.message + ")", "var(--red)");
+          if (cb) cb(err);
+          return;
+        }
 
-          var pRemote = data.plugins[pInfo.slug];
-          if (!pRemote || !pRemote.version) {
-            if (!silent) setPluginStatus("No update info for " + pInfo.slug, "var(--blue)");
-            if (cb) cb(null, false);
-            return;
-          }
+        var remote = data.plugins[local.slug];
+        if (!remote || !remote.version) {
+          if (!silent) setPluginStatus("No update info for " + local.slug, "var(--blue)");
+          if (cb) cb(null, false);
+          return;
+        }
+        if (!remote.slug) remote.slug = local.slug;
 
-          if (isNewerVersion(pRemote.version, pInfo.version)) {
-            pendingUpdate = pRemote;
-            if (bUp) {
-              bUp.classList.add("has-update");
-              bUp.title = "Update available: v" + pRemote.version + " (Current: v" + pInfo.version + ") - Click to install";
-            }
-            setPluginStatus("Update v" + pRemote.version + " available! Click the update icon.", "var(--orange)");
-            if (cb) cb(null, true, pRemote);
-          } else {
-            pendingUpdate = null;
-            if (bUp) {
-              bUp.classList.remove("has-update");
-              bUp.title = "Plugin is up to date (v" + pInfo.version + ") - Click to check";
-            }
-            if (!silent) {
-              setPluginStatus("You have the latest version (v" + pInfo.version + ")", "var(--blue)");
-            }
-            if (cb) cb(null, false);
+        if (isNewerVersion(remote.version, local.version)) {
+          pendingUpdate = remote;
+          if (bUp) {
+            bUp.classList.add("has-update");
+            bUp.title = "Update available: v" + remote.version + " (installed v" + local.version + ") - click to install";
           }
-        });
+          setPluginStatus("Update v" + remote.version + " available! Click the update icon.", "var(--orange)");
+          if (cb) cb(null, true, remote);
+        } else {
+          pendingUpdate = null;
+          if (bUp) {
+            bUp.classList.remove("has-update");
+            bUp.title = "Up to date (v" + local.version + ") - click to check, alt+click for diagnostics";
+          }
+          if (!silent) setPluginStatus("You have the latest version (v" + local.version + ")", "var(--blue)");
+          if (cb) cb(null, false);
+        }
       });
-    } catch (err) {
-      if (!silent) setPluginStatus("Update check error: " + err.message, "var(--red)");
-      if (cb) cb(err);
-    }
+    });
   }
 
+  function fetchBundleJson(updateInfo, local, cb) {
+    var slug = updateInfo.slug || local.slug;
+    var path = "bundles/" + slug + ".json";
+    var mirrors = [RAW_BASE + path, CDN_BASE + path];
+    if (updateInfo.bundleUrl && mirrors.indexOf(updateInfo.bundleUrl) === -1) {
+      mirrors.push(updateInfo.bundleUrl);
+    }
+    tryMirrors(mirrors, TIMEOUT_BUNDLE, function (bundle) {
+      if (!bundle || !bundle.files) return "no files in bundle";
+      var keys = Object.keys(bundle.files);
+      if (!keys.length) return "bundle is empty";
+      // jsDelivr can serve a cached older copy - refuse anything stale
+      if (bundle.version && isNewerVersion(updateInfo.version, bundle.version)) {
+        return "stale copy (v" + bundle.version + ")";
+      }
+      for (var i = 0; i < keys.length; i++) {
+        if (typeof bundle.files[keys[i]] !== "string") return "corrupt entry " + keys[i];
+      }
+      return null;
+    }, cb);
+  }
+
+  // --- install ------------------------------------------------------------
   function applyUpdate(updateInfo) {
     var bUp = document.getElementById("btnUpdate");
     if (bUp) bUp.classList.add("is-updating");
 
-    var pInfo = getPluginInfo();
-    setPluginStatus("Downloading " + (updateInfo.name || pInfo.slug) + " v" + updateInfo.version + "...", "var(--orange)");
-
+    LOG = [];
+    var local = readLocalInfo();
     var extPath = getExtPath();
-    if (!extPath || !updateInfo.bundleUrl) {
-      fallbackZxp(updateInfo, "Missing bundle or extension path");
-      return;
-    }
 
-    fetchJson(updateInfo.bundleUrl, function (err, bundle) {
-      if (err || !bundle || !bundle.files) {
-        fallbackZxp(updateInfo, "Could not fetch bundle: " + (err ? err.message : "Corrupt"));
-        return;
+    log("=== apply update ===");
+    log("plugin=" + local.slug + " bundleId=" + local.bundleId);
+    log("installed=v" + local.version + " -> remote=v" + updateInfo.version);
+    log("extPath=" + extPath);
+    log("cep.fs=" + (typeof window.cep !== "undefined" && !!window.cep.fs) +
+        " extendscript=" + (typeof window.__adobe_cep__ !== "undefined"));
+
+    if (!extPath) return failUpdate(updateInfo, "extension path unknown");
+
+    setPluginStatus("Checking write access...", "var(--orange)");
+    probeWritable(extPath, function (writable, detail) {
+      log("writable=" + writable + " via " + detail);
+      if (!writable) {
+        return failUpdate(updateInfo,
+          "plugin folder is read-only - reinstall to your user folder", extPath);
       }
 
-      setPluginStatus("Installing v" + updateInfo.version + "...", "var(--orange)");
-
-      var fileKeys = Object.keys(bundle.files);
-      function writeNext(idx) {
-        if (idx >= fileKeys.length) {
-          // Completed
-          if (bUp) {
-            bUp.classList.remove("is-updating");
-            bUp.classList.remove("has-update");
-          }
-          setPluginStatus("Updated to v" + updateInfo.version + "! Reloading...", "var(--blue)");
-
-          if (typeof window.__adobe_cep__ !== "undefined" && typeof window.__adobe_cep__.evalScript === "function") {
-            var hostFile = extPath + "/jsx/host.jsx";
-            window.__adobe_cep__.evalScript('$.evalFile(new File("' + hostFile + '"))', function () {
-              setTimeout(function () { window.location.reload(); }, 250);
-            });
-          } else {
-            setTimeout(function () { window.location.reload(); }, 250);
-          }
-          return;
-        }
-
-        var rel = fileKeys[idx];
-        var content = bundle.files[rel];
-        var targetFile = extPath + "/" + rel;
-
-        writeExtensionFile(targetFile, content, function (wErr) {
-          if (wErr) {
-            fallbackZxp(updateInfo, "Write error: " + wErr.message);
-            return;
-          }
-          writeNext(idx + 1);
-        });
-      }
-
-      writeNext(0);
+      setPluginStatus("Downloading v" + updateInfo.version + "...", "var(--orange)");
+      fetchBundleJson(updateInfo, local, function (err, bundle) {
+        if (err) return failUpdate(updateInfo, "download failed - " + err.message, extPath);
+        log("bundle v" + bundle.version + " files=" + Object.keys(bundle.files).length);
+        installBundle(bundle, updateInfo, local, extPath);
+      });
     });
   }
 
-  function fallbackZxp(updateInfo, reason) {
-    var bUp = document.getElementById("btnUpdate");
-    if (bUp) bUp.classList.remove("is-updating");
+  function installBundle(bundle, updateInfo, local, extPath) {
+    var version = bundle.version || updateInfo.version;
+    var keys = Object.keys(bundle.files);
+    var backup = {};
+    var written = [];
 
-    setPluginStatus("Auto-update failed (" + reason + "). Opening package...", "var(--red)");
-    var targetUrl = updateInfo.zxpUrl || updateInfo.releaseUrl || MANIFEST_MIRRORS[0];
-    try {
-      if (typeof window.cep !== "undefined" && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
-        window.cep.util.openURLInDefaultBrowser(targetUrl);
-      } else {
-        window.open(targetUrl, "_blank");
+    setPluginStatus("Installing v" + version + " (0/" + keys.length + ")...", "var(--orange)");
+
+    function rollback(reason, done) {
+      log("ROLLBACK: " + reason);
+      var i = 0;
+      function next() {
+        if (i >= written.length) return done();
+        var rel = written[i++];
+        if (typeof backup[rel] !== "string") return next();
+        writeVerified(extPath + "/" + rel, backup[rel], function (e) {
+          log("restore " + rel + (e ? " FAILED " + e.message : " ok"));
+          next();
+        });
       }
-    } catch (e) {
-      window.open(targetUrl, "_blank");
+      next();
+    }
+
+    function step(idx) {
+      if (idx >= keys.length) return postInstall(bundle, updateInfo, local, extPath, version);
+
+      var rel = keys[idx];
+      var target = extPath + "/" + rel;
+      var content = bundle.files[rel];
+      var current = cepRead(target);
+      if (typeof current === "string") backup[rel] = current;
+
+      setPluginStatus("Installing v" + version + " (" + (idx + 1) + "/" + keys.length + ")...", "var(--orange)");
+
+      writeVerified(target, content, function (err, how) {
+        if (err) {
+          log("write FAILED " + rel + " -> " + err.message);
+          return rollback(err.message, function () {
+            failUpdate(updateInfo, "write failed on " + rel + " (" + err.message + ")", extPath);
+          });
+        }
+        written.push(rel);
+        log("wrote " + rel + " (" + content.length + " chars, " + how + ")");
+        step(idx + 1);
+      });
+    }
+
+    step(0);
+  }
+
+  // Patching the folder invalidates the ZXP signature, so the extension has
+  // to be switched to unsigned + debug mode or After Effects drops it on the
+  // next launch.
+  function postInstall(bundle, updateInfo, local, extPath, version) {
+    setPluginStatus("Finalizing v" + version + "...", "var(--orange)");
+
+    cepDelete(extPath + "/META-INF/signatures.xml");
+    es('(function(){try{var f=new File("' + esStr(extPath) + '/META-INF/signatures.xml");' +
+       'if(f.exists){f.remove();return "OK|removed";}return "OK|absent";}catch(e){return "ERR|"+e.toString();}})()',
+      function (sigRes) {
+        log("signature: " + sigRes);
+
+        var debugXml =
+          '<?xml version="1.0" encoding="UTF-8"?>\n' +
+          '<ExtensionList>\n' +
+          '  <Extension Id="' + local.extensionId + '">\n' +
+          '    <HostList>\n' +
+          '      <Host Name="AEFT" Port="' + debugPort(local.bundleId) + '"/>\n' +
+          '    </HostList>\n' +
+          '  </Extension>\n' +
+          '</ExtensionList>\n';
+
+        writeVerified(extPath + "/.debug", debugXml, function (dErr) {
+          log(".debug: " + (dErr ? "FAILED " + dErr.message : "ok"));
+          enableDebugMode(function (dbgRes) {
+            log("PlayerDebugMode: " + dbgRes);
+            writeLog(extPath, function (logPath) {
+              finishUpdate(extPath, version, logPath);
+            });
+          });
+        });
+      });
+  }
+
+  function debugPort(bundleId) {
+    var h = 0;
+    for (var i = 0; i < bundleId.length; i++) h = (h * 31 + bundleId.charCodeAt(i)) % 900;
+    return 8100 + h;
+  }
+
+  // Writes a throwaway shell/batch file and runs it - avoids quoting hell
+  // inside system.callSystem.
+  function enableDebugMode(cb) {
+    var isWin = /win/i.test(navigator.platform || "");
+    var body;
+    if (isWin) {
+      body = '@echo off\r\nfor /L %%i in (9,1,26) do reg add "HKCU\\SOFTWARE\\Adobe\\CSXS.%%i" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1\r\n';
+    } else {
+      body = '#!/bin/sh\nfor i in 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26; do\n' +
+             '  defaults write com.adobe.CSXS.$i PlayerDebugMode 1 >/dev/null 2>&1\ndone\n';
+    }
+    var name = isWin ? "feugee-debugmode.bat" : "feugee-debugmode.sh";
+    var payload = encodeURIComponent(body);
+    var script = '(function(){try{' +
+      'var f=new File(Folder.temp.fsName+"/' + name + '");' +
+      'f.encoding="UTF-8";f.lineFeed="Unix";' +
+      'if(!f.open("w")) return "ERR|temp open failed";' +
+      'f.write(decodeURIComponent("' + payload + '"));f.close();' +
+      'var cmd=' + (isWin
+        ? '"cmd.exe /c \\""+f.fsName+"\\""'
+        : '"/bin/sh \\""+f.fsName+"\\""') + ';' +
+      'system.callSystem(cmd);f.remove();return "OK";' +
+      '}catch(e){return "ERR|"+e.toString();}})()';
+    es(script, function (res) { cb(res || "no response"); });
+  }
+
+  function finishUpdate(extPath, version, logPath) {
+    var bUp = document.getElementById("btnUpdate");
+    if (bUp) {
+      bUp.classList.remove("is-updating");
+      bUp.classList.remove("has-update");
+    }
+    pendingUpdate = null;
+    log("=== updated to v" + version + " ===");
+    setPluginStatus("Updated to v" + version + "! Reloading...", "var(--blue)");
+
+    if (typeof window.__adobe_cep__ !== "undefined" &&
+        typeof window.__adobe_cep__.evalScript === "function") {
+      window.__adobe_cep__.evalScript(
+        '$.evalFile(new File("' + esStr(extPath + "/jsx/host.jsx") + '"))',
+        function () { setTimeout(function () { window.location.reload(true); }, 400); });
+    } else {
+      setTimeout(function () { window.location.reload(true); }, 400);
     }
   }
 
-  // Inject Reload Button
+  function failUpdate(updateInfo, reason, extPath) {
+    var bUp = document.getElementById("btnUpdate");
+    if (bUp) bUp.classList.remove("is-updating");
+    lastFailure = reason;
+    log("FAILED: " + reason);
+    try { localStorage.setItem("feugee.update.lastError", reason); } catch (e) {}
+
+    writeLog(extPath || getExtPath(), function (logPath) {
+      setPluginStatus("Update failed: " + reason + (logPath ? " - see " + logPath : ""), "var(--red)");
+      var targetUrl = (updateInfo && (updateInfo.zxpUrl || updateInfo.releaseUrl)) || REPAIR_PAGE;
+      openExternal(targetUrl);
+    });
+  }
+
+  function openExternal(url) {
+    try {
+      if (typeof window.cep !== "undefined" && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
+        window.cep.util.openURLInDefaultBrowser(url);
+        return;
+      }
+    } catch (e) {}
+    try { window.open(url, "_blank"); } catch (e) {}
+  }
+
+  function writeLog(extPath, cb) {
+    var text = LOG.join("\n") + "\n";
+    if (extPath && cepWrite(extPath + "/feugee-update.log", text)) {
+      return cb(extPath + "/feugee-update.log");
+    }
+    var payload = encodeURIComponent(text);
+    var script = '(function(){try{' +
+      'var d=new Folder(Folder.userData.fsName+"/Feugee");if(!d.exists)d.create();' +
+      'var f=new File(d.fsName+"/feugee-update.log");f.encoding="UTF-8";' +
+      'if(!f.open("w")) return "ERR|open failed";' +
+      'f.write(decodeURIComponent("' + payload + '"));f.close();return "OK|"+f.fsName;' +
+      '}catch(e){return "ERR|"+e.toString();}})()';
+    es(script, function (res) {
+      cb(res && res.indexOf("OK|") === 0 ? res.substring(3) : "");
+    });
+  }
+
+  // --- diagnostics (alt+click on the update button) -----------------------
+  function runDiagnostics() {
+    LOG = [];
+    var local = readLocalInfo();
+    var extPath = getExtPath();
+    setPluginStatus("Running diagnostics...", "var(--orange)");
+
+    log("=== feugee diagnostics ===");
+    log("plugin=" + local.slug + " v" + local.version + " (" + local.bundleId + ")");
+    log("extPath=" + extPath);
+    log("platform=" + navigator.platform + " ua=" + navigator.userAgent);
+    log("cep.fs=" + (typeof window.cep !== "undefined" && !!window.cep.fs));
+    log("signature present=" + (cepRead(extPath + "/META-INF/signatures.xml") !== null));
+    log(".debug present=" + (cepRead(extPath + "/.debug") !== null));
+    log("last failure=" + (lastFailure || localStorage.getItem("feugee.update.lastError") || "none"));
+
+    probeWritable(extPath, function (writable, detail) {
+      log("writable=" + writable + " via " + detail);
+      tryMirrors(MANIFEST_MIRRORS, TIMEOUT_MANIFEST, function (d) {
+        return d && d.plugins ? null : "no plugins key";
+      }, function (mErr, manifest) {
+        log("manifest=" + (mErr ? "FAILED " + mErr.message : "ok, remote v" +
+          (manifest.plugins[local.slug] ? manifest.plugins[local.slug].version : "?")));
+        var remote = (!mErr && manifest.plugins[local.slug]) || { slug: local.slug, version: local.version };
+        fetchBundleJson(remote, local, function (bErr, bundle) {
+          log("bundle=" + (bErr ? "FAILED " + bErr.message
+            : "ok v" + bundle.version + ", " + Object.keys(bundle.files).length + " files"));
+          writeLog(extPath, function (logPath) {
+            setPluginStatus("Diagnostics saved: " + (logPath || "console only"), "var(--blue)");
+            if (logPath) es('(function(){try{new File("' + esStr(logPath) + '").execute();return "OK";}catch(e){return "ERR";}})()', function () {});
+          });
+        });
+      });
+    });
+  }
+
+  // ---------------------------------------------------------
+  // TOPBAR BUTTONS
+  // ---------------------------------------------------------
   var bReload = document.createElement("button");
   bReload.id = "btnReload";
   bReload.className = "topbar-btn";
@@ -705,37 +1047,45 @@
   bReload.addEventListener("click", reloadPlugin);
   topbar.appendChild(bReload);
 
-  // Inject Update Button
   var bUpdate = document.createElement("button");
   bUpdate.id = "btnUpdate";
   bUpdate.className = "topbar-btn";
-  bUpdate.title = "Check for updates";
+  bUpdate.title = "Check for updates (alt+click for diagnostics)";
   bUpdate.innerHTML = SVG_UPDATE;
-  bUpdate.addEventListener("click", function () {
+  bUpdate.addEventListener("click", function (ev) {
     if (bUpdate.classList.contains("is-updating")) return;
+
+    if (ev && (ev.altKey || ev.metaKey && ev.shiftKey)) {
+      runDiagnostics();
+      return;
+    }
+
     if (bUpdate.classList.contains("has-update") && pendingUpdate) {
       applyUpdate(pendingUpdate);
-    } else {
-      bUpdate.classList.add("is-spinning");
-      setPluginStatus("Checking for updates...", "var(--orange)");
-
-      var done = false;
-      var safetyTimer = setTimeout(function () {
-        if (!done) {
-          done = true;
-          bUpdate.classList.remove("is-spinning");
-          setPluginStatus("Update check timed out", "var(--red)");
-        }
-      }, 10000);
-
-      checkForUpdates(false, function () {
-        if (!done) {
-          done = true;
-          clearTimeout(safetyTimer);
-          bUpdate.classList.remove("is-spinning");
-        }
-      });
+      return;
     }
+
+    bUpdate.classList.add("is-spinning");
+    setPluginStatus("Checking for updates...", "var(--orange)");
+
+    var done = false;
+    var safety = setTimeout(function () {
+      if (done) return;
+      done = true;
+      bUpdate.classList.remove("is-spinning");
+      setPluginStatus("Update check timed out", "var(--red)");
+    }, TIMEOUT_MANIFEST * 2 + 2000);
+
+    checkForUpdates(false, function () {
+      if (done) return;
+      done = true;
+      clearTimeout(safety);
+      bUpdate.classList.remove("is-spinning");
+    });
+  });
+  bUpdate.addEventListener("contextmenu", function (ev) {
+    ev.preventDefault();
+    if (!bUpdate.classList.contains("is-updating")) runDiagnostics();
   });
   topbar.appendChild(bUpdate);
 

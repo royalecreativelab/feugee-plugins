@@ -1,29 +1,129 @@
 # Feugee Studio — After Effects Plugins
 
-Official CEP Extension suite for Adobe After Effects by **Feugee Studio**.
+Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 
-| Plugin | Version | Description | Download |
+<!-- TABLE -->
+| Plugin | Version | Payload | Download |
 |---|---|---|---|
-| **Knowledge Nuke** | `v3.1.1` | Explainer & Motion Design Toolkit | [Download ZXP](releases/Feugee_KnowledgeNuke_v3.1.1.zxp) |
-| **SideQuest** | `v1.4.1` | Fast Animation Presets & Keyframe Rig | [Download ZXP](releases/Feugee_SideQuest_v1.4.1.zxp) |
-| **Feugelign** | `v1.2.2` | Parenting-Aware 2D & 3D Align + Distribute | [Download ZXP](releases/Feugelign_v1.2.2.zxp) |
-| **Feugee Motion** | `v1.0.0` | Curve Editor, Motion Tools & Presets | [Download ZXP](releases/Feugee_Motion_v1.0.0.zxp) |
+| **Knowledge Nuke** | `v3.2.0` | 6 files | installer script |
+| **SideQuest** | `v1.5.0` | 8 files | installer script |
+| **Feugelign** | `v1.3.0` | 8 files | installer script |
+| **Feugee Motion** | `v1.1.0` | 8 files | installer script |
+<!-- /TABLE -->
 
 ---
 
-## First Time Installation
+## Install
 
-1. Download and install **ZXP Installer** (free): https://aescripts.com/learn/zxp-installer/
-2. **Quit After Effects**.
-3. Download the `.zxp` file from the table above.
-4. Drag and drop the `.zxp` file into ZXP Installer.
-5. Open After Effects → **Window › Extensions › [Plugin Name]**.
+**macOS** — download [`install/Install-Feugee-Plugins.command`](install/Install-Feugee-Plugins.command), then:
+
+1. Quit After Effects.
+2. Right-click the file → **Open** → **Open** (first run only, Gatekeeper asks once).
+3. Wait for `4/4 plugins installed`.
+4. Open After Effects → **Window › Extensions › [Plugin Name]**.
+
+**Windows** — see [Manual install](#manual-install) below.
+
+The installer writes into the **per-user** CEP folder
+(`~/Library/Application Support/Adobe/CEP/extensions` on macOS,
+`%APPDATA%\Adobe\CEP\extensions` on Windows) and turns on CEP
+`PlayerDebugMode`. Both are required for live updates: After Effects cannot
+write to the system-wide folder a ZXP installer uses, and a panel patched in
+place no longer matches its ZXP signature.
 
 ---
 
-## Automatic Updates
+## Automatic updates
 
-All Feugee plugins include built-in **In-Place Auto-Update**:
-- When an update is published, an **orange indicator dot** will appear on the Update button in the panel's header.
-- Click the Update button to automatically download and apply the update.
-- The panel reloads webview and ExtendScript host in 1–2 seconds — **no After Effects restart or manual ZXP re-installation needed**.
+Every panel checks this repo on launch.
+
+- An update is published → an **orange dot** appears on the update button.
+- Click it → the panel downloads the new files, writes them in place, verifies
+  each one, and reloads the webview and ExtendScript host in 1–2 seconds.
+- No After Effects restart, no ZXP reinstall.
+
+If a write fails halfway, the previous version is restored automatically —
+the panel is never left half-updated.
+
+### When an update fails
+
+The status bar shows the reason. For the full story:
+
+**Alt+click** (or right-click) the update button → runs diagnostics and opens
+`feugee-update.log`, which lists the extension path, write access, which
+mirror answered, and the exact failure. That log is what to send when asking
+for help.
+
+Common causes:
+
+| Status message | What it means | Fix |
+|---|---|---|
+| `plugin folder is read-only` | Installed system-wide by a ZXP installer | Run the installer script above |
+| `download failed - … HTTP 403` | GitHub API rate limit on the studio IP | Retry; the panel no longer uses that API |
+| `write failed on <file>` | Antivirus or a permissions issue | Run the installer script above |
+
+---
+
+## Repair / reinstall
+
+Run the same installer script — it is idempotent. It overwrites the plugin
+files with the current published version, rewrites `.debug`, re-enables
+`PlayerDebugMode`, and warns if an old system-wide copy is still shadowing the
+user copy.
+
+If both copies exist, After Effects may keep loading the old one. Delete the
+system copy once:
+
+```
+sudo rm -rf "/Library/Application Support/Adobe/CEP/extensions/com.feugee.feugelign"
+```
+
+---
+
+## Manual install
+
+Works on both platforms, no scripts.
+
+1. Quit After Effects.
+2. Download `bundles/<slug>.json` for the plugin you want.
+3. Create the folder `<CEP extensions>/<bundleId>` where `<CEP extensions>` is
+   `~/Library/Application Support/Adobe/CEP/extensions` (macOS) or
+   `%APPDATA%\Adobe\CEP\extensions` (Windows).
+4. Every key in the JSON `files` object is a relative path and every value is
+   that file's content — write them out as UTF-8.
+5. Enable unsigned extensions:
+   - macOS: `defaults write com.adobe.CSXS.12 PlayerDebugMode 1` — repeat for
+     each CSXS version your AE uses; 9–26 covers CC 2019 → 2026.
+   - Windows: add a string value `PlayerDebugMode = 1` under
+     `HKEY_CURRENT_USER\SOFTWARE\Adobe\CSXS.12` (same version range).
+
+| Plugin | slug | bundleId |
+|---|---|---|
+| Knowledge Nuke | `knowledgenuke` | `com.feugee.knowledgenuke` |
+| SideQuest | `sidequest` | `com.feugee.sidequest` |
+| Feugelign | `feugelign` | `com.feugee.feugelign` |
+| Feugee Motion | `feugeemotion` | `com.feugee.motion` |
+
+---
+
+## Publishing an update (maintainer)
+
+```bash
+python3 tools/build.py --set feugelign=1.3.1 --sync-modes
+git add -A && git commit -m "release: feugelign v1.3.1" && git push
+```
+
+`tools/build.py` bumps `CSXS/manifest.xml` and the version badge in
+`index.html`, copies the canonical `Feugelign_CEP/js/modes.js` into every
+plugin, regenerates `bundles/*.json` and `updates.json`, and refreshes the
+table above. Panels pick the update up on their next launch.
+
+## Tests
+
+```bash
+node tools/tests/test-updater.js            # detect, install, rollback, offline
+node tools/tests/test-extendscript-path.js  # ExtendScript write path + chunking
+```
+
+Both run without After Effects: the CEP filesystem and the manifest fetch are
+faked, the ExtendScript snippets are parsed and their file writes emulated.
