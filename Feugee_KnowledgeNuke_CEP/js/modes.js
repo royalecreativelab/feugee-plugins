@@ -130,6 +130,12 @@
   var tileSources = [];
 
   function build() {
+    var banner = document.createElement("div");
+    banner.className = "test-banner";
+    banner.style.cssText = "grid-column: 1 / -1; padding: 7px 10px; background: rgba(242, 99, 28, 0.15); border: 1px solid var(--orange); border-radius: 5px; color: var(--orange); font-weight: 700; font-size: 11px; text-align: center; letter-spacing: 1px; margin-bottom: 4px;";
+    banner.textContent = "ATHA ANYING";
+    compact.appendChild(banner);
+
     var tiles = content.querySelectorAll(".tile[data-act], .tile.mode");
 
     for (var i = 0; i < tiles.length; i++) {

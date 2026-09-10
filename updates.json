@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-10T21:29:43Z",
+  "updatedAt": "2026-09-10T21:37:06Z",
   "plugins": {
     "knowledgenuke": {
       "slug": "knowledgenuke",
       "name": "Knowledge Nuke",
       "version": "3.2.0",
-      "updatedAt": "2026-09-10T21:29:43Z",
+      "updatedAt": "2026-09-10T21:37:06Z",
       "changelog": "v3.2.0",
       "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/knowledgenuke.json",
       "installerUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.command",
@@ -16,7 +16,7 @@
       "slug": "sidequest",
       "name": "SideQuest",
       "version": "1.5.0",
-      "updatedAt": "2026-09-10T21:29:43Z",
+      "updatedAt": "2026-09-10T21:37:06Z",
       "changelog": "v1.5.0",
       "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/sidequest.json",
       "installerUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.command",
@@ -25,9 +25,9 @@
     "feugelign": {
       "slug": "feugelign",
       "name": "Feugelign",
-      "version": "1.3.2",
-      "updatedAt": "2026-09-10T21:29:43Z",
-      "changelog": "v1.3.2",
+      "version": "1.3.3",
+      "updatedAt": "2026-09-10T21:37:06Z",
+      "changelog": "v1.3.3",
       "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/feugelign.json",
       "installerUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.command",
       "releaseUrl": "https://github.com/royalecreativelab/feugee-plugins#repair--reinstall"
@@ -36,7 +36,7 @@
       "slug": "feugeemotion",
       "name": "Feugee Motion",
       "version": "1.1.0",
-      "updatedAt": "2026-09-10T21:29:43Z",
+      "updatedAt": "2026-09-10T21:37:06Z",
       "changelog": "v1.1.0",
       "bundleUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/bundles/feugeemotion.json",
       "installerUrl": "https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.command",
