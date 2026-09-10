@@ -1,4 +1,8 @@
-# Windows installer must keep CRLF or cmd.exe mangles it
-*.bat text eol=crlf
+# The .bat is downloaded straight from raw.githubusercontent.com, which
+# serves the repo blob -- so the blob itself must keep CRLF. Normalising it
+# to LF ships a batch file cmd.exe can mis-parse.
+*.bat -text
+
+# The .ps1 is only ever piped into PowerShell, which is fine with LF.
 *.ps1 text eol=crlf
 *.command text eol=lf
