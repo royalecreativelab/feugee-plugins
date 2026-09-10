@@ -29,7 +29,24 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   4. Wait for `4/4 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
-**Windows** — see [Manual install](#manual-install) below.
+**Windows** — Choose one of the two options:
+
+- **Option 1 — PowerShell one-liner (Recommended & fast):**
+  Quit After Effects, open **PowerShell**, paste this command and press Enter:
+  ```powershell
+  irm https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/install/Install-Feugee-Plugins.ps1 | iex
+  ```
+
+- **Option 2 — Double-click installer (GUI):**
+  1. Quit After Effects.
+  2. Download [`install/Install-Feugee-Plugins.bat`](install/Install-Feugee-Plugins.bat) *(right-click → **Save link as…**)*.
+  3. Double-click it. If SmartScreen warns, choose **More info → Run anyway** — the installer is unsigned.
+  4. Wait for `4/4 plugins installed`.
+  5. Open After Effects → **Window › Extensions › [Plugin Name]**.
+
+  No administrator rights needed. The `.bat` downloads the PowerShell installer
+  itself, so it works on its own; if you cloned the repo it runs the local
+  `Install-Feugee-Plugins.ps1` next to it instead.
 
 The installer writes into the **per-user** CEP folder
 (`~/Library/Application Support/Adobe/CEP/extensions` on macOS,
@@ -81,9 +98,20 @@ user copy.
 If both copies exist, After Effects may keep loading the old one. Delete the
 system copy once:
 
-```
+macOS:
+
+```bash
 sudo rm -rf "/Library/Application Support/Adobe/CEP/extensions/com.feugee.feugelign"
 ```
+
+Windows — in an **Administrator** PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force "${env:CommonProgramFiles(x86)}\Adobe\CEP\extensions\com.feugee.feugelign"
+```
+
+Both installers print the exact paths they found, so you can paste straight
+from their output.
 
 ---
 

@@ -151,6 +151,7 @@ def build():
             "changelog": "v%s" % meta["version"],
             "bundleUrl": RAW + "bundles/%s.json" % slug,
             "installerUrl": RAW + "install/Install-Feugee-Plugins.command",
+            "installerUrlWin": RAW + "install/Install-Feugee-Plugins.bat",
             # panels shipped before v2 open this when an update fails
             "releaseUrl": "https://github.com/%s#repair--reinstall" % REPO,
         }
