@@ -2,12 +2,12 @@
 <ExtensionManifest
   Version="6.0"
   ExtensionBundleId="com.feugee.knowledgenuke"
-  ExtensionBundleVersion="3.3.5"
+  ExtensionBundleVersion="3.3.6"
   ExtensionBundleName="Feugee Knowledge Nuke"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <ExtensionList>
-    <Extension Id="com.feugee.knowledgenuke.panel" Version="3.3.5" />
+    <Extension Id="com.feugee.knowledgenuke.panel" Version="3.3.6" />
   </ExtensionList>
 
   <ExecutionEnvironment>
