@@ -1323,6 +1323,70 @@
     } catch (e) {}
   }
 
+  // ---------------------------------------------------------
+  // DECORATIVE 8-BIT PIXEL MARQUEE TICKER
+  // "HELLO, FEUG PEOPLES!!!"
+  // ---------------------------------------------------------
+  function initTicker() {
+    try {
+      if (document.getElementById("feugeeTicker")) return;
+      var topbar = document.querySelector(".topbar");
+      if (!topbar || !topbar.parentNode) return;
+
+      var ticker = document.createElement("div");
+      ticker.id = "feugeeTicker";
+      ticker.className = "feugee-ticker";
+      ticker.setAttribute("role", "marquee");
+      ticker.setAttribute("aria-label", "HELLO, FEUG PEOPLES!!!");
+
+      var track = document.createElement("div");
+      track.className = "feugee-ticker-track";
+
+      var textGroup =
+        '<span class="ticker-item">' +
+          '<span class="pixel-icon icon-spark">✦</span> ' +
+          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-icon icon-ghost">👾</span> ' +
+          '<span class="pixel-dot">■</span>' +
+        '</span>' +
+        '<span class="ticker-item">' +
+          '<span class="pixel-icon icon-star">★</span> ' +
+          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-icon icon-bolt">⚡</span> ' +
+          '<span class="pixel-dot">■</span>' +
+        '</span>' +
+        '<span class="ticker-item">' +
+          '<span class="pixel-icon icon-spark">✦</span> ' +
+          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-icon icon-heart">♥</span> ' +
+          '<span class="pixel-dot">■</span>' +
+        '</span>';
+
+      var seg1 = document.createElement("div");
+      seg1.className = "feugee-ticker-segment";
+      seg1.innerHTML = textGroup;
+
+      var seg2 = document.createElement("div");
+      seg2.className = "feugee-ticker-segment";
+      seg2.setAttribute("aria-hidden", "true");
+      seg2.innerHTML = textGroup;
+
+      track.appendChild(seg1);
+      track.appendChild(seg2);
+      ticker.appendChild(track);
+
+      ticker.addEventListener("click", function () {
+        ticker.classList.remove("pixel-pop");
+        void ticker.offsetWidth;
+        ticker.classList.add("pixel-pop");
+      });
+
+      topbar.parentNode.insertBefore(ticker, topbar.nextSibling);
+    } catch (e) {}
+  }
+
+  initTicker();
+
   initSplash();
 
   // Background check for updates (silent)
