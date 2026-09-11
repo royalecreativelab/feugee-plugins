@@ -1334,7 +1334,7 @@
 
   // ---------------------------------------------------------
   // DECORATIVE 8-BIT PIXEL MARQUEE TICKER
-  // "HELLO, FEUG PEOPLES!!!"
+  // "andro anying cukingana"
   // ---------------------------------------------------------
   function initTicker() {
     try {
@@ -1346,7 +1346,7 @@
       ticker.id = "feugeeTicker";
       ticker.className = "feugee-ticker";
       ticker.setAttribute("role", "marquee");
-      ticker.setAttribute("aria-label", "HELLO, FEUG PEOPLES!!!");
+      ticker.setAttribute("aria-label", "andro anying cukingana");
 
       var track = document.createElement("div");
       track.className = "feugee-ticker-track";
@@ -1354,19 +1354,19 @@
       var textGroup =
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-spark">✦</span> ' +
-          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-ghost">👾</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>' +
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-star">★</span> ' +
-          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-bolt">⚡</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>' +
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-spark">✦</span> ' +
-          '<span class="pixel-text">HELLO, FEUG PEOPLES!!!</span> ' +
+          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-heart">♥</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>';
