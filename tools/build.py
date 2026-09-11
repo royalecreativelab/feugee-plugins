@@ -148,6 +148,7 @@ def build():
             "name": name,
             "version": meta["version"],
             "updatedAt": now,
+            "force": True,
             "changelog": "v%s" % meta["version"],
             "bundleUrl": RAW + "bundles/%s.json" % slug,
             "installerUrl": RAW + "install/Install-Feugee-Plugins.command",

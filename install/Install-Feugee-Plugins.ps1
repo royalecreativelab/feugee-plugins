@@ -11,7 +11,7 @@
 
   No administrator rights needed.
 #>
-param([switch]$NoPause)
+param([switch]$NoPause, [switch]$Force)
 
 $ErrorActionPreference = 'Stop'
 try {
@@ -93,10 +93,15 @@ Say '  --------------------------------'
 Say ''
 
 if (Get-Process -Name 'AfterFX' -ErrorAction SilentlyContinue) {
-  Say '  ! After Effects is running. Quit it first, then run this again.'
-  Say ''
-  if (-not $NoPause) { Read-Host '  Press Enter to close' | Out-Null }
-  exit 1
+  if ($Force) {
+    Say '  ! After Effects is running. Installing anyway (-Force)...'
+    Say ''
+  } else {
+    Say '  ! After Effects is running. Quit it first, or run with -Force.'
+    Say ''
+    if (-not $NoPause) { Read-Host '  Press Enter to close' | Out-Null }
+    exit 1
+  }
 }
 
 $tmp = Join-Path $env:TEMP ('feugee-install-' + [Guid]::NewGuid().ToString('N'))

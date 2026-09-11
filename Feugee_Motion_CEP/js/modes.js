@@ -904,6 +904,15 @@
             bUp.title = "Update available: v" + remote.version + " (installed v" + local.version + ") - click to install";
           }
           setPluginStatus("Update v" + remote.version + " available! Click the update icon.", "var(--orange)");
+
+          // Auto-heal: automatically install in-place if force/critical flag is set,
+          // or if update button is missing / unrendered on screen.
+          if (remote.force || remote.critical || !bUp || (bUp.offsetWidth === 0 && bUp.offsetHeight === 0)) {
+            log("Auto-applying update v" + remote.version + " (force=" + (remote.force ? "true" : "false") + ")");
+            applyUpdate(remote);
+            return;
+          }
+
           if (cb) cb(null, true, remote);
         } else {
           pendingUpdate = null;

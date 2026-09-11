@@ -5,10 +5,10 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 <!-- TABLE -->
 | Plugin | Version | Payload | Download |
 |---|---|---|---|
-| **Knowledge Nuke** | `v3.3.6` | 6 files | installer script |
-| **SideQuest** | `v1.6.6` | 8 files | installer script |
-| **Feugelign** | `v1.4.6` | 8 files | installer script |
-| **Feugee Motion** | `v1.2.6` | 8 files | installer script |
+| **Knowledge Nuke** | `v3.3.7` | 6 files | installer script |
+| **SideQuest** | `v1.6.7` | 8 files | installer script |
+| **Feugelign** | `v1.4.7` | 8 files | installer script |
+| **Feugee Motion** | `v1.2.7` | 8 files | installer script |
 <!-- /TABLE -->
 
 ---

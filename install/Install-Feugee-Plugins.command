@@ -13,13 +13,24 @@ echo "  FEUGEE STUDIO - plugin installer"
 echo "  --------------------------------"
 echo ""
 
-if pgrep -x "After Effects" >/dev/null 2>&1; then
-  echo "  ! After Effects is running. Quit it first, then run this again."
-  echo ""
-  read -r -p "  Press return to close..." _
-  exit 1
-fi
+FORCE=0
+for arg in "$@"; do
+  case "$arg" in
+    --force|-f) FORCE=1 ;;
+  esac
+done
 
+if pgrep -x "After Effects" >/dev/null 2>&1; then
+  if [ "$FORCE" -eq 1 ]; then
+    echo "  ! After Effects is running. Installing anyway (--force)..."
+    echo ""
+  else
+    echo "  ! After Effects is running. Quit it first, or pass --force to install anyway."
+    echo ""
+    [ -t 0 ] && read -r -p "  Press return to close..." _
+    exit 1
+  fi
+fi
 /usr/bin/osascript -l JavaScript <<'JXA'
 ObjC.import('Foundation');
 
@@ -159,4 +170,5 @@ echo ""
 echo "  Open After Effects -> Window > Extensions."
 echo "  From now on the update button installs new versions in place."
 echo ""
-read -r -p "  Press return to close..." _
+[ -t 0 ] && read -r -p "  Press return to close..." _
+exit 0
