@@ -39,7 +39,8 @@ var PLUGINS = [
   { slug: 'knowledgenuke', id: 'com.feugee.knowledgenuke', name: 'Knowledge Nuke' },
   { slug: 'sidequest',     id: 'com.feugee.sidequest',     name: 'SideQuest' },
   { slug: 'feugelign',     id: 'com.feugee.feugelign',     name: 'Feugelign' },
-  { slug: 'feugeemotion',  id: 'com.feugee.motion',        name: 'Feugee Motion' }
+  { slug: 'feugeemotion',  id: 'com.feugee.motion',        name: 'Feugee Motion' },
+  { slug: 'mograph',       id: 'com.feugee.mograph',       name: 'Feugee Mograph' }
 ];
 
 var app = Application.currentApplication();

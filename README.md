@@ -9,6 +9,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **SideQuest** | `v1.6.8` | 8 files | installer script |
 | **Feugelign** | `v1.4.8` | 8 files | installer script |
 | **Feugee Motion** | `v1.2.8` | 8 files | installer script |
+| **Feugee Mograph** | `v1.0.0` | 7 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -138,6 +139,7 @@ Works on both platforms, no scripts.
 | SideQuest | `sidequest` | `com.feugee.sidequest` |
 | Feugelign | `feugelign` | `com.feugee.feugelign` |
 | Feugee Motion | `feugeemotion` | `com.feugee.motion` |
+| Feugee Mograph | `mograph` | `com.feugee.mograph` |
 
 ---
 

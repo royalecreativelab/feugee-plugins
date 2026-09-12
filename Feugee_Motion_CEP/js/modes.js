@@ -421,6 +421,7 @@
     if (/knowledge\s*nuke/i.test(fullText)) slug = "knowledgenuke";
     else if (/sidequest/i.test(fullText)) slug = "sidequest";
     else if (/feugelign/i.test(fullText)) slug = "feugelign";
+    else if (/mograph/i.test(fullText)) slug = "mograph";
     else if (/motion/i.test(fullText)) slug = "feugeemotion";
 
     var verMatch = fullText.match(/v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)/i);
@@ -515,7 +516,8 @@
     "com.feugee.feugelign": "feugelign",
     "com.feugee.knowledgenuke": "knowledgenuke",
     "com.feugee.sidequest": "sidequest",
-    "com.feugee.motion": "feugeemotion"
+    "com.feugee.motion": "feugeemotion",
+    "com.feugee.mograph": "mograph"
   };
 
   var TIMEOUT_MANIFEST = 12000;
@@ -1297,6 +1299,7 @@
       var pluginInfo = getPluginInfo();
       var displayName = pluginInfo.name || "Plugin";
       if (displayName.toLowerCase() === "motion") displayName = "Feugee Motion";
+      if (displayName.toLowerCase() === "mograph") displayName = "Feugee Mograph";
 
       var splash = document.createElement("div");
       splash.id = "feugeeSplash";

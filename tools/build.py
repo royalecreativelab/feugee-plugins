@@ -26,6 +26,7 @@ PLUGINS = [
     ("Feugee_SideQuest_CEP", "sidequest", "SideQuest", "Feugee_SideQuest"),
     ("Feugelign_CEP", "feugelign", "Feugelign", "Feugelign"),
     ("Feugee_Motion_CEP", "feugeemotion", "Feugee Motion", "Feugee_Motion"),
+    ("Feugee_Mograph_CEP", "mograph", "Feugee Mograph", "Feugee_Mograph"),
 ]
 
 SKIP_NAMES = {".DS_Store", ".debug", "feugee-update.log", ".feugee-write-test",
