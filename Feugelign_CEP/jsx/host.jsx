@@ -656,17 +656,24 @@ function fgAlign(axis, mode, to, by, safe, scaleComp, keyIdx) {
     });
 }
 
+// No chained ternaries here: ExtendScript parses a ? b : c ? d : e as
+// (a ? b : c) ? d : e, which turned "min" on Y into "bawah".
 function fgAxisLabel(a, mode) {
     var ax = ["X", "Y", "Z"][a];
-    var md = (mode === "min") ? (a === 0 ? "kiri" : a === 1 ? "atas" : "belakang")
-           : (mode === "max") ? (a === 0 ? "kanan" : a === 1 ? "bawah" : "depan")
-           : "tengah";
+    var md = "tengah";
+    if (mode === "min") {
+        md = ["kiri", "atas", "belakang"][a];
+    } else if (mode === "max") {
+        md = ["kanan", "bawah", "depan"][a];
+    }
     return ax + " " + md;
 }
 
 function fgToLabel(to, safe) {
     if (to === "comp") {
-        return (safe === "action") ? "action safe" : (safe === "title") ? "title safe" : "comp";
+        if (safe === "action") return "action safe";
+        if (safe === "title") return "title safe";
+        return "comp";
     }
     return (to === "key") ? "key object" : "selection";
 }

@@ -28,6 +28,7 @@ PLUGINS = [
     ("Feugee_Motion_CEP", "feugeemotion", "Feugee Motion", "Feugee_Motion"),
     ("Feugee_Mograph_CEP", "mograph", "Feugee Mograph", "Feugee_Mograph"),
     ("Feugee_FXSearch_CEP", "fxsearch", "FX Search", "Feugee_FXSearch"),
+    ("Feugee_Feugelord_CEP", "feugelord", "Feugelord (Beta)", "Feugee_Feugelord"),
 ]
 
 SKIP_NAMES = {".DS_Store", ".debug", "feugee-update.log", ".feugee-write-test",

@@ -7,10 +7,11 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 |---|---|---|---|
 | **Knowledge Nuke** | `v3.3.8` | 6 files | installer script |
 | **SideQuest** | `v1.6.8` | 8 files | installer script |
-| **Feugelign** | `v1.4.8` | 8 files | installer script |
-| **Feugee Motion** | `v1.2.8` | 8 files | installer script |
-| **Feugee Mograph** | `v1.0.0` | 7 files | installer script |
-| **FX Search** | `v1.1.1` | 11 files | installer script |
+| **Feugelign** | `v1.4.9` | 8 files | installer script |
+| **Feugee Motion** | `v1.2.9` | 8 files | installer script |
+| **Feugee Mograph** | `v1.1.0` | 7 files | installer script |
+| **FX Search** | `v1.1.2` | 11 files | installer script |
+| **Feugelord (Beta)** | `v1.0.0` | 9 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -28,7 +29,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download and unzip [`install/Install-Feugee-Plugins.zip`](install/Install-Feugee-Plugins.zip) *(the `.zip` preserves macOS executable permissions)*.
   3. Right-click `Install-Feugee-Plugins.command` → **Open** → **Open** (first run only, Gatekeeper asks once).
-  4. Wait for `6/6 plugins installed`.
+  4. Wait for `7/7 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
 **Windows** — Choose one of the two options:
@@ -43,7 +44,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download [`install/Install-Feugee-Plugins.bat`](install/Install-Feugee-Plugins.bat) *(right-click → **Save link as…**)*.
   3. Double-click it. If SmartScreen warns, choose **More info → Run anyway** — the installer is unsigned.
-  4. Wait for `6/6 plugins installed`.
+  4. Wait for `7/7 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
   No administrator rights needed. The `.bat` downloads the PowerShell installer
@@ -80,6 +81,32 @@ effect or preset, press Enter and it lands on **every selected layer**.
 
 Favorites, aliases, overrides and snapshots live in **Window › Extensions › Feugee FX Search**.
 Verified on After Effects 2026 (26.5) for macOS.
+
+---
+## Feugelord (Beta) — Illustrator → After Effects
+
+> **Beta.** Phase 1 only and not yet tested on real studio artwork by the team. Report anything that lands wrong.
+
+Push vector artwork from Illustrator into After Effects as **native shape layers**
+(editable paths, fills, strokes, groups), no import dialog, no AI file linked.
+
+1. Install, then restart **both** Illustrator and After Effects once.
+2. Illustrator: **Window › Extensions › Feugee Feugelord**.
+3. Select artwork → **Selection** (lands in the active comp), or **Artboard**
+   (a new comp the artboard's size, one shape layer per Illustrator layer).
+
+After Effects builds the push on its own — its panel can stay closed.
+
+| Phase 1 — supported | Not yet — skipped and reported |
+|---|---|
+| Bezier paths, compound paths (even-odd holes), groups & nesting | Gradients (sent as their first colour) |
+| Solid fill: RGB, CMYK, Gray, Spot (Illustrator's own conversion) | Clipping masks (contents sent unclipped) |
+| Stroke width, cap, join, miter, dashes | Blend modes, raster images, gradient meshes |
+| Opacity, names, stacking order, artboard → comp | |
+| Text and symbols (outlined from a temporary copy) | |
+
+Verified on Illustrator 2026 (30.8) + After Effects 2026 (26.5), macOS: the render
+of a pushed test artboard matches Illustrator's export to 0.17/255 mean difference.
 
 ---
 
@@ -185,6 +212,7 @@ table above. Panels pick the update up on their next launch.
 ```bash
 node tools/tests/test-updater.js            # detect, install, rollback, offline
 node tools/tests/test-extendscript-path.js  # ExtendScript write path + chunking
+node tools/tests/test-extendscript-hygiene.js  # no chained ternaries in ANY plugin's ExtendScript
 ```
 
 Both run without After Effects: the CEP filesystem and the manifest fetch are

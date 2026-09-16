@@ -117,7 +117,7 @@ Script ini akan:
 ### Langkah 6: Jalankan Verifikasi & Push
 ```bash
 # Jalankan test suite
-node tools/tests/test-updater.js && node tools/tests/test-extendscript-path.js
+node tools/tests/test-updater.js && node tools/tests/test-extendscript-path.js && node tools/tests/test-extendscript-hygiene.js
 
 # Commit & push ke GitHub
 git add -A

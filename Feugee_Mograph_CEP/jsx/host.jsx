@@ -6,6 +6,7 @@
  * without the panel installed.
  *
  *   Cloners    Grid, Array, Linear              (Null controllers)
+ *              Path                             (shape controller: edit it with the Pen tool)
  *   Effectors  Field, Step, Noise, Target,      (guide shape controllers)
  *              Inheritance
  *   Helpers    Link, Unlink, Select, Copy, Organize, Clean, Bake, Sample
@@ -30,15 +31,15 @@ var FG_MOGRAPH = (function () {
     var LINK_FX = "FGM Link ";
     var HEADER = "// FGM:";
 
-    var CLONERS = { grid: 1, array: 1, linear: 1 };
+    var CLONERS = { grid: 1, array: 1, linear: 1, path: 1 };
     var EFFECTORS = { field: 1, step: 1, noise: 1, target: 1, inherit: 1 };
     var TITLE = {
-        grid: "Grid", array: "Array", linear: "Linear", field: "Field",
+        grid: "Grid", array: "Array", linear: "Linear", path: "Path", field: "Field",
         step: "Step", noise: "Noise", target: "Target", inherit: "Inherit"
     };
-    var CLONER_TYPE = { grid: 1, array: 2, linear: 3 };
+    var CLONER_TYPE = { grid: 1, array: 2, linear: 3, path: 4 };
     // AE label colours: 9 green, 4 pink, 10 purple
-    var LABEL = { grid: 9, array: 9, linear: 9, field: 4, step: 10, noise: 10, target: 10, inherit: 10 };
+    var LABEL = { grid: 9, array: 9, linear: 9, path: 9, field: 4, step: 10, noise: 10, target: 10, inherit: 10 };
     var ORDER = { cloner: 0, inherit: 1, step: 2, field: 3, noise: 4, target: 5 };
 
     // ==========================================================
@@ -295,6 +296,16 @@ var FG_MOGRAPH = (function () {
             ]);
             push(DELAY_SPEC);
             push(SCATTER_SPEC);
+        } else if (kind === "path") {
+            // Start / End / Offset are % of the path length; animate Offset to travel
+            push([
+                ["slider", "Start", 0], ["slider", "End", 100], ["slider", "Offset", 0],
+                ["check", "Loop Offset", 1], ["check", "Align to Path", 1],
+                ["check", "Reverse Layer Order", 0],
+                ["check", "Link Rotation", 1], ["angle", "Base Rotation", 0]
+            ]);
+            push(DELAY_SPEC);
+            push(SCATTER_SPEC);
         } else if (kind === "field") {
             push([
                 ["drop", "Shape", [["Circle", "Line"], 1]],
@@ -371,9 +382,93 @@ var FG_MOGRAPH = (function () {
         }
     }
 
-    function makeController(comp, kind, pos3, is3D) {
+    /* A gentle S-curve centred on the layer origin, sized to the comp. */
+    function defaultPathShape(comp) {
+        var w = Math.min(comp.width * 0.6, 1400), h = w * 0.3;
+        var s = new Shape();
+        s.vertices = [[-w / 2, 0], [w / 2, 0]];
+        s.inTangents = [[0, 0], [-w * 0.4, h]];
+        s.outTangents = [[w * 0.4, -h], [0, 0]];
+        s.closed = false;
+        return s;
+    }
+
+    var GROUP_XF = [
+        ["ADBE Vector Anchor", "anchor"], ["ADBE Vector Position", "position"],
+        ["ADBE Vector Scale", "scale"], ["ADBE Vector Rotation", "rotation"]
+    ];
+
+    /* The path the clones follow. The expression takes the TOPMOST path in
+       Contents, so a shape drawn with the Pen tool on this layer (AE adds it
+       on top) takes over without touching the panel. */
+    function addPathGroup(layer, shape, xf) {
+        var root = function () { return layer.property("ADBE Root Vectors Group"); };
+        root().addProperty("ADBE Vector Group");
+        var gi = root().numProperties;
+        root().property(gi).name = "Path";
+        var vecs = function () { return root().property(gi).property("ADBE Vectors Group"); };
+        vecs().addProperty("ADBE Vector Shape - Group");
+        vecs().property(vecs().numProperties).property("ADBE Vector Shape").setValue(shape);
+        vecs().addProperty("ADBE Vector Graphic - Stroke");
+        var st = function () { return vecs().property(vecs().numProperties); };
+        st().property("ADBE Vector Stroke Color").setValue([0.949, 0.388, 0.11]);
+        st().property("ADBE Vector Stroke Width").setValue(3);
+        if (xf) {
+            for (var i = 0; i < GROUP_XF.length; i++) {
+                try { root().property(gi).property("ADBE Vector Transform Group").property(GROUP_XF[i][0]).setValue(xf[GROUP_XF[i][1]]); } catch (e) {}
+            }
+        }
+    }
+
+    /* A path the user already drew, picked in the timeline or the viewer:
+       a Path / Mask Path property, or the Path / Mask group around it.
+       peek = only say whose path it is; the panel poll must never sample. */
+    function selectedPathSource(comp, peek) {
+        var props = comp.selectedProperties;
+        for (var i = 0; i < props.length; i++) {
+            var p = props[i];
+            try {
+                if (p.matchName === "ADBE Vector Shape - Group") p = p.property("ADBE Vector Shape");
+                else if (p.matchName === "ADBE Mask Atom") p = p.property("ADBE Mask Shape");
+                if (!p || p.propertyType !== PropertyType.PROPERTY || p.propertyValueType !== PropertyValueType.SHAPE) continue;
+                var owner = ownerLayer(p);
+                if (isCtrl(owner)) continue;
+                if (peek) return { layer: owner };
+                var xf = null;
+                // Path -> Path group -> Contents -> Group
+                var g = p.parentProperty ? p.parentProperty.parentProperty : null;
+                g = g ? g.parentProperty : null;
+                if (p.matchName === "ADBE Vector Shape" && g && g.matchName === "ADBE Vector Group") {
+                    xf = {};
+                    var gt = g.property("ADBE Vector Transform Group");
+                    for (var k = 0; k < GROUP_XF.length; k++) xf[GROUP_XF[k][1]] = gt.property(GROUP_XF[k][0]).valueAtTime(comp.time, false);
+                }
+                return { layer: owner, shape: p.valueAtTime(comp.time, false), xf: xf };
+            } catch (e) {}
+        }
+        return null;
+    }
+
+    /* Give the controller the source layer's parent and 2D transform, so the
+       copied vertices land exactly where they were drawn. Parent first:
+       assigning a parent afterwards would re-compensate the position. */
+    function matchLayerTransform(comp, src, dst, is3D) {
+        try { if (src.parent) dst.parent = src.parent; } catch (e) {}
+        var names = ["ADBE Anchor Point", "ADBE Position", "ADBE Scale", "ADBE Rotate Z"];
+        for (var i = 0; i < names.length; i++) {
+            try {
+                var v = src.property("ADBE Transform Group").property(names[i]).valueAtTime(comp.time, false);
+                if (!is3D && v instanceof Array && v.length > 2 && i < 2) v = [v[0], v[1]];
+                dst.property("ADBE Transform Group").property(names[i]).setValue(v);
+            } catch (e2) {}
+        }
+    }
+
+    function makeController(comp, kind, pos3, is3D, pathSrc) {
         var layer;
-        if (CLONERS[kind]) {
+        if (kind === "path") {
+            layer = comp.layers.addShape();
+        } else if (CLONERS[kind]) {
             layer = comp.layers.addNull();
         } else {
             layer = comp.layers.addShape();
@@ -404,11 +499,20 @@ var FG_MOGRAPH = (function () {
             }
         }
 
+        if (kind === "path") {
+            layer.guideLayer = true;
+            addPathGroup(layer, pathSrc ? pathSrc.shape : defaultPathShape(comp), pathSrc ? pathSrc.xf : null);
+        }
+
         if (is3D) { try { layer.threeDLayer = true; } catch (e3) {} }
-        try {
-            var p = layer.property("ADBE Transform Group").property("ADBE Position");
-            p.setValue(is3D ? [pos3[0], pos3[1], pos3[2]] : [pos3[0], pos3[1]]);
-        } catch (e4) {}
+        if (pathSrc) {
+            matchLayerTransform(comp, pathSrc.layer, layer, is3D);
+        } else {
+            try {
+                var p = layer.property("ADBE Transform Group").property("ADBE Position");
+                p.setValue(is3D ? [pos3[0], pos3[1], pos3[2]] : [pos3[0], pos3[1]]);
+            } catch (e4) {}
+        }
 
         return { kind: kind, id: id, layer: layer };
     }
@@ -475,6 +579,43 @@ var FG_MOGRAPH = (function () {
         "  seedRandom(Math.round(fgmFx(c, \"Random Influence Seed\", 1, t)) * 7919 + index * 17 + 3, true);",
         "  return f * Math.max(0, 1 + random(-rin, rin) / 100);",
         "}",
+        // Path cloner: the topmost path in the controller's Contents, one group deep
+        "function fgmPathFind(c, t) {",
+        "  var R = null;",
+        "  try { R = c(\"ADBE Root Vectors Group\"); } catch (e) { return null; }",
+        "  for (var g = 1; g <= R.numProperties; g++) {",
+        "    var G = R(g), S = null, X = null;",
+        "    try { S = G(\"ADBE Vector Shape\"); S.pointOnPath(0, t); } catch (e1) { S = null; }",
+        "    if (!S) {",
+        "      var V = null;",
+        "      try { V = G(\"ADBE Vectors Group\"); } catch (e2) { V = null; }",
+        "      if (!V) continue;",
+        "      for (var k = 1; k <= V.numProperties && !S; k++) {",
+        "        try { S = V(k)(\"ADBE Vector Shape\"); S.pointOnPath(0, t); } catch (e3) { S = null; }",
+        "      }",
+        "      if (!S) continue;",
+        "      try { X = G(\"ADBE Vector Transform Group\"); } catch (e4) { X = null; }",
+        "    }",
+        "    var closed = false;",
+        "    try { closed = S.isClosed(); } catch (e5) { closed = false; }",
+        "    return { S: S, X: X, closed: closed };",
+        "  }",
+        "  return null;",
+        "}",
+        // point + tangent angle at u (0..1 of the length), in controller layer space
+        "function fgmPathPoint(P, u, t) {",
+        "  var pt = P.S.pointOnPath(u, t), tg = P.S.tangentOnPath(u, t);",
+        "  if (P.X) {",
+        "    var ap = P.X(\"ADBE Vector Anchor\").valueAtTime(t), ps = P.X(\"ADBE Vector Position\").valueAtTime(t);",
+        "    var sc = P.X(\"ADBE Vector Scale\").valueAtTime(t), ro = degreesToRadians(P.X(\"ADBE Vector Rotation\").valueAtTime(t));",
+        "    var cs = Math.cos(ro), sn = Math.sin(ro);",
+        "    var x0 = (pt[0] - ap[0]) * sc[0] / 100, y0 = (pt[1] - ap[1]) * sc[1] / 100;",
+        "    pt = [x0 * cs - y0 * sn + ps[0], x0 * sn + y0 * cs + ps[1]];",
+        "    var tx = tg[0] * sc[0] / 100, ty = tg[1] * sc[1] / 100;",
+        "    tg = [tx * cs - ty * sn, tx * sn + ty * cs];",
+        "  }",
+        "  return [pt[0], pt[1], radiansToDegrees(Math.atan2(tg[1], tg[0]))];",
+        "}",
         // cloner pose in controller space: [x, y, z, rotation, scale%, delay factor]
         "function fgmPose(c, i, n, t) {",
         "  var type = Math.round(fgmFx(c, \"Cloner Type\", 0, t));",
@@ -511,6 +652,21 @@ var FG_MOGRAPH = (function () {
         "    x = P[0] * mult; y = P[1] * mult;",
         "    r = fgmFx(c, \"Rotation\", 0, t) * mult;",
         "    s = 100 + (fgmFx(c, \"Scale\", 100, t) - 100) * mult;",
+        "  } else if (type === 4) {",
+        "    var pi = fgmFx(c, \"Reverse Layer Order\", 0, t) ? n - 1 - i : i;",
+        "    df = n > 1 ? pi / (n - 1) : 0;",
+        "    var PP = fgmPathFind(c, t);",
+        "    if (PP) {",
+        "      var u0 = fgmFx(c, \"Start\", 0, t) / 100, uspan = fgmFx(c, \"End\", 100, t) / 100 - u0;",
+        // a closed path spanned end to end would put the last clone on the first
+        "      var ust = (PP.closed && Math.abs(uspan) >= 0.99999) ? uspan / n : (n > 1 ? uspan / (n - 1) : 0);",
+        "      var u = u0 + ust * pi + fgmFx(c, \"Offset\", 0, t) / 100;",
+        "      if (fgmFx(c, \"Loop Offset\", 1, t) && (u < -0.000001 || u > 1.000001)) u -= Math.floor(u);",
+        "      u = Math.max(0, Math.min(1, u));",
+        "      var pa = fgmP3(c.anchorPoint.valueAtTime(t)), pq = fgmPathPoint(PP, u, t);",
+        "      x = pq[0] - pa[0]; y = pq[1] - pa[1];",
+        "      if (fgmFx(c, \"Align to Path\", 1, t)) r = pq[2];",
+        "    }",
         "  }",
         "  if (fgmFx(c, \"Scatter Enable\", 0, t)) {",
         "    seedRandom(Math.round(fgmFx(c, \"Scatter Seed\", 1, t)) * 7919 + i * 13 + 1, true);",
@@ -1277,6 +1433,14 @@ var FG_MOGRAPH = (function () {
     // ==========================================================
     function createCloner(comp, kind, cloneCount, gx, gy) {
         var layers = selectedPlainLayers(comp);
+        // read before duplicating: that changes the selection
+        var pathSrc = kind === "path" ? selectedPathSource(comp) : null;
+        if (pathSrc) {
+            var rest = [];
+            for (var pl = 0; pl < layers.length; pl++) if (layers[pl].index !== pathSrc.layer.index) rest.push(layers[pl]);
+            layers = rest;
+            if (!layers.length) return "ERR|Path picked from " + pathSrc.layer.name + " - now also select the layer to clone along it";
+        }
         if (!layers.length) {
             if (selectedCtrls(comp, null).length) return "ERR|That is a controller - select the layers you want to clone";
             return "ERR|Select at least 1 layer to clone";
@@ -1294,7 +1458,7 @@ var FG_MOGRAPH = (function () {
         }
         layers.sort(function (a, b) { return a.index - b.index; });
 
-        var ctrl = makeController(comp, kind, centroid(comp, layers), all3D(layers));
+        var ctrl = makeController(comp, kind, centroid(comp, layers), all3D(layers), pathSrc);
         ctrl.layer.moveBefore(layers[0]);
         for (var k = 0; k < layers.length; k++) {
             var anchor = k === 0 ? ctrl.layer : layers[k - 1];
@@ -1311,7 +1475,13 @@ var FG_MOGRAPH = (function () {
 
         var res = linkLayers(ctrl, layers);
         selectOnly(comp, [ctrl.layer]);
-        return "OK|" + report("Cloned", res, ctrl.layer.name);
+        var tip = "";
+        if (kind === "path") {
+            tip = pathSrc
+                ? " - path copied from " + pathSrc.layer.name + ", hide it if it was only a guide"
+                : " - reshape it with the Pen tool (G); a new path drawn on it takes over";
+        }
+        return "OK|" + report("Cloned", res, ctrl.layer.name) + tip;
     }
 
     function createEffector(comp, kind, mask) {
@@ -1887,12 +2057,12 @@ var FG_MOGRAPH = (function () {
 
     // ==========================================================
     // SCAN (read-only, polled by the panel)
-    // OK|<comp name>|<plain layers>|<props>|<rows>
+    // OK|<comp name>|<plain layers>|<props>|<rows>|<path source layer name>
     // row = kind~id~encodedName~links~selected, joined with ";"
     // ==========================================================
     function scan() {
         var comp = activeComp();
-        if (!comp) return "OK||0|0|";
+        if (!comp) return "OK||0|0||";
         var sel = comp.selectedLayers;
         var plain = 0;
         for (var i = 0; i < sel.length; i++) if (!isCtrl(sel[i])) plain++;
@@ -1924,7 +2094,10 @@ var FG_MOGRAPH = (function () {
             var it = list[r];
             rows.push(it.kind + "~" + it.id + "~" + encodeURIComponent(it.layer.name) + "~" + counts[it.id] + "~" + (it.layer.selected ? 1 : 0));
         }
-        return "OK|" + encodeURIComponent(comp.name) + "|" + plain + "|" + nProps + "|" + rows.join(";");
+        var src = null;
+        try { src = selectedPathSource(comp, true); } catch (e3) { src = null; }
+        return "OK|" + encodeURIComponent(comp.name) + "|" + plain + "|" + nProps + "|" + rows.join(";") +
+               "|" + (src ? encodeURIComponent(src.layer.name) : "");
     }
 
     return {

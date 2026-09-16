@@ -38,7 +38,7 @@
   }
 
   function extPath() {
-    try { return window.__adobe_cep__.getSystemPath("extension").replace(/^file:\/\//, ""); }
+    try { return decodeURIComponent(window.__adobe_cep__.getSystemPath("extension").replace(/^file:\/\//, "")); }
     catch (e) { return ""; }
   }
 

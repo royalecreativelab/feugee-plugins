@@ -37,7 +37,7 @@
   </svg>
   <div class="brand-text">
     <h1>FEUGEE STUDIO</h1>
-    <p>Mograph <b>v1.0.0</b></p>
+    <p>Mograph <b>v1.1.0</b></p>
   </div>
 </header>
 
@@ -52,11 +52,13 @@
       <div class="field"><label for="gridY">Grid Y</label><input id="gridY" type="text" value="3" data-min="1" data-max="50"></div>
       <div class="field"><label for="arrN">Array</label><input id="arrN" type="text" value="6" data-min="1" data-max="200"></div>
       <div class="field"><label for="linN">Linear</label><input id="linN" type="text" value="5" data-min="1" data-max="200"></div>
+      <div class="field"><label for="pathN">Path</label><input id="pathN" type="text" value="8" data-min="1" data-max="200"></div>
     </div>
-    <div class="tiles trio">
+    <div class="tiles trio fgm-quad">
       <button class="tile" data-act="create:grid" data-params="gridX,gridY" title="Arrange the selected layers in a grid. One layer is duplicated to Grid X x Grid Y first."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="3" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="3" width="4.5" height="4.5" rx="1"/><rect x="3" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="9.75" width="4.5" height="4.5" rx="1"/><rect x="3" y="16.5" width="4.5" height="4.5" rx="1"/><rect x="9.75" y="16.5" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="16.5" width="4.5" height="4.5" rx="1"/></svg><span>GRID</span></button>
       <button class="tile" data-act="create:array" data-params="arrN" title="Arrange the selected layers on a circle. One layer is duplicated to the Array count first."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1.9"/><circle cx="18.9" cy="8" r="1.9"/><circle cx="18.9" cy="16" r="1.9"/><circle cx="12" cy="20" r="1.9"/><circle cx="5.1" cy="16" r="1.9"/><circle cx="5.1" cy="8" r="1.9"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg><span>ARRAY</span></button>
       <button class="tile" data-act="create:linear" data-params="linN" title="Spread the selected layers along a line. One layer is duplicated to the Linear count first."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18.5 21 5.5" stroke-dasharray="1.5 2.6"/><rect x="2" y="15.5" width="4" height="4" rx="1"/><rect x="8" y="10.8" width="5" height="5" rx="1"/><rect x="15" y="3" width="6.5" height="6.5" rx="1.2"/></svg><span>LINEAR</span></button>
+      <button class="tile" data-act="create:path" data-params="pathN" title="Spread the selected layers along a path you shape with the Pen tool. One layer is duplicated to the Path count first. Select a drawn path (or mask) too to use it instead of the default curve."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19C6 8 10 8 12 12s6 4 9-7" stroke-dasharray="1.5 2.6"/><rect x="1.8" y="16.3" width="3.6" height="3.6" rx="0.8" transform="rotate(-60 3.6 18.1)"/><rect x="10.2" y="10.2" width="3.6" height="3.6" rx="0.8" transform="rotate(45 12 12)"/><rect x="18.4" y="3.2" width="3.6" height="3.6" rx="0.8" transform="rotate(-65 20.2 5)"/></svg><span>PATH</span></button>
     </div>
     <p class="sub">Existing cloner</p>
     <div class="fgm-link">

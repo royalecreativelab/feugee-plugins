@@ -15,7 +15,7 @@
   if (!cep) return;
 
   function extPath() {
-    try { return cep.getSystemPath("extension").replace(/^file:\/\//, ""); } catch (e) { return ""; }
+    try { return decodeURIComponent(cep.getSystemPath("extension").replace(/^file:\/\//, "")); } catch (e) { return ""; }
   }
 
   // Give After Effects a moment to finish launching before scanning presets.

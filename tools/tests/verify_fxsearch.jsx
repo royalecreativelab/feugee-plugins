@@ -28,7 +28,12 @@
         report.encoding = "UTF-8";
         report.lineFeed = "Unix";
         report.open("w");
-        report.write(lines.join("\n") + "\n" + (skipped ? "NOT RUN" : fails ? fails + " FAILED" : "ALL PASSED") + "\n");
+        // if/else, not a chained ternary - ExtendScript read the old one as
+        // (skipped ? "NOT RUN" : fails) ? ..., so a skipped run said "0 FAILED".
+        var verdict = "ALL PASSED";
+        if (skipped) verdict = "NOT RUN";
+        else if (fails) verdict = fails + " FAILED";
+        report.write(lines.join("\n") + "\n" + verdict + "\n");
         report.close();
     }
 

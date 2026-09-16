@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ExtensionManifest
   Version="6.0"
-  ExtensionBundleId="com.feugee.fxsearch"
-  ExtensionBundleVersion="1.1.2"
-  ExtensionBundleName="Feugee FX Search"
+  ExtensionBundleId="com.feugee.feugelord"
+  ExtensionBundleVersion="1.0.0"
+  ExtensionBundleName="Feugee Feugelord"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <!--
-    Two extensions, one bundle:
-      .panel    library - favorites, aliases, overrides, snapshots, settings
-      .hub      invisible, starts with AE, installs the launcher, warms the popup
-    The Ctrl+Space popup itself is native ScriptUI (jsx/popup.jsx): a CEP
-    window cannot be hidden, and booting one per keypress costs 1.2-1.5 s.
+    One bundle, two apps:
+      .panel  Illustrator: push selection / artboard.  After Effects: receive log + options.
+      .hub    After Effects only, invisible, starts with AE and builds whatever
+              lands in the outbox - so a push works without the AE panel open.
   -->
   <ExtensionList>
-    <Extension Id="com.feugee.fxsearch.panel" Version="1.1.2" />
-    <Extension Id="com.feugee.fxsearch.hub" Version="1.1.2" />
+    <Extension Id="com.feugee.feugelord.panel" Version="1.0.0" />
+    <Extension Id="com.feugee.feugelord.hub" Version="1.0.0" />
   </ExtensionList>
 
   <ExecutionEnvironment>
     <HostList>
       <Host Name="AEFT" Version="[0.0,99.9]" />
+      <Host Name="ILST" Version="[0.0,99.9]" />
     </HostList>
     <LocaleList>
       <Locale Code="All" />
@@ -32,7 +32,7 @@
 
   <DispatchInfoList>
 
-    <Extension Id="com.feugee.fxsearch.panel">
+    <Extension Id="com.feugee.feugelord.panel">
       <DispatchInfo>
         <Resources>
           <MainPath>./index.html</MainPath>
@@ -48,11 +48,11 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>Feugee FX Search</Menu>
+          <Menu>Feugee Feugelord</Menu>
           <Geometry>
             <Size>
-              <Width>360</Width>
-              <Height>600</Height>
+              <Width>320</Width>
+              <Height>520</Height>
             </Size>
             <MinSize>
               <Width>190</Width>
@@ -67,8 +67,8 @@
       </DispatchInfo>
     </Extension>
 
-    <Extension Id="com.feugee.fxsearch.hub">
-      <DispatchInfo>
+    <Extension Id="com.feugee.feugelord.hub">
+      <DispatchInfo Host="AEFT">
         <Resources>
           <MainPath>./hub.html</MainPath>
           <ScriptPath>./jsx/host.jsx</ScriptPath>

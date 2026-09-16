@@ -1,0 +1,93 @@
+/* =========================================================
+   FEUGEE FEUGELORD  -  panel additions (behind the .fl- prefix)
+   ========================================================= */
+
+.fl-note {
+  margin: 0 0 8px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* push progress: sent -> building -> done */
+.fl-steps {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.fl-steps li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.fl-steps li i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.fl-steps li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-steps li b { font-weight: 400; font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.fl-steps li.ok i { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.fl-steps li.ok span { color: var(--text); }
+.fl-steps li.wait i { background: var(--blue); animation: flBlink 900ms ease-in-out infinite; }
+.fl-steps li.err i { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.fl-steps li.err span { color: var(--danger); white-space: normal; }
+@keyframes flBlink { 50% { opacity: 0.25; } }
+
+.fl-warn,
+.fl-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.fl-warn li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  border: 1px dashed var(--stroke);
+  font-size: 9.5px;
+  color: var(--text-dim);
+}
+.fl-warn li b { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.fl-log li {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  background: var(--tile);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.fl-log li i { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+.fl-log li.err i { background: var(--danger); }
+.fl-log li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-log li b { font-weight: 400; font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.fl-log .fl-none { display: block; background: transparent; border-style: dashed; color: var(--text-muted); }
+
+/* beta chip next to the brand text */
+.fl-beta {
+  align-self: center;
+  margin-left: 2px;
+  padding: 2px 6px;
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 8.5px;
+  letter-spacing: 0.8px;
+  line-height: 1.2;
+}

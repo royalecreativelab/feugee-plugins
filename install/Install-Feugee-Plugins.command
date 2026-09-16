@@ -41,7 +41,8 @@ var PLUGINS = [
   { slug: 'feugelign',     id: 'com.feugee.feugelign',     name: 'Feugelign' },
   { slug: 'feugeemotion',  id: 'com.feugee.motion',        name: 'Feugee Motion' },
   { slug: 'mograph',       id: 'com.feugee.mograph',       name: 'Feugee Mograph' },
-  { slug: 'fxsearch',      id: 'com.feugee.fxsearch',      name: 'Feugee FX Search' }
+  { slug: 'fxsearch',      id: 'com.feugee.fxsearch',      name: 'Feugee FX Search' },
+  { slug: 'feugelord',     id: 'com.feugee.feugelord',     name: 'Feugee Feugelord' }
 ];
 
 var app = Application.currentApplication();

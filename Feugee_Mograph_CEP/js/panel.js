@@ -14,10 +14,10 @@
   var busy = false;
   var hostReady = false;
 
-  // last scan: { comp, plain, props, rows: [{kind,id,name,links,selected}] }
-  var SCAN = { comp: "", plain: 0, props: 0, rows: [] };
+  // last scan: { comp, plain, props, rows: [{kind,id,name,links,selected}], pathSrc }
+  var SCAN = { comp: "", plain: 0, props: 0, rows: [], pathSrc: "" };
 
-  var CLONER_KINDS = { grid: 1, array: 1, linear: 1 };
+  var CLONER_KINDS = { grid: 1, array: 1, linear: 1, path: 1 };
 
   // ---------------------------------------------------------
   // BRIDGE
@@ -149,12 +149,14 @@
     }
 
     var gx = readInt("gridX", 3), gy = readInt("gridY", 3);
-    var arr = readInt("arrN", 6), lin = readInt("linN", 5);
+    var arr = readInt("arrN", 6), lin = readInt("linN", 5), pth = readInt("pathN", 8);
 
-    if (SCAN.plain === 0) {
+    if (SCAN.pathSrc) {
+      metaClone.textContent = "PATH follows the path on " + SCAN.pathSrc + " (that layer is not cloned)";
+    } else if (SCAN.plain === 0) {
       metaClone.textContent = "Select layers to clone";
     } else if (SCAN.plain === 1) {
-      metaClone.textContent = "1 layer -> duplicated: grid " + gx + "x" + gy + ", array " + arr + ", linear " + lin;
+      metaClone.textContent = "1 layer -> duplicated: grid " + gx + "x" + gy + ", array " + arr + ", linear " + lin + ", path " + pth;
     } else {
       metaClone.textContent = SCAN.plain + " layers -> arranged as they are, nothing duplicated";
     }
@@ -231,7 +233,7 @@
       var empty = document.createElement("p");
       empty.className = "fgm-empty";
       empty.textContent = SCAN.comp
-        ? "Select a layer and press GRID, ARRAY or LINEAR - or press SAMPLE for a ready-made rig."
+        ? "Select a layer and press GRID, ARRAY, LINEAR or PATH - or press SAMPLE for a ready-made rig."
         : "Open a composition to see its rigs.";
       list.appendChild(empty);
       return;
@@ -259,13 +261,15 @@
   }
 
   function applyScan(raw) {
-    // OK|<comp>|<plain>|<props>|<rows>
+    // OK|<comp>|<plain>|<props>|<rows>|<path source>
     var f = raw.split("|");
     var comp = "";
     try { comp = decodeURIComponent(f[1] || ""); } catch (e) { comp = f[1] || ""; }
     SCAN.comp = comp;
     SCAN.plain = parseInt(f[2], 10) || 0;
     SCAN.props = parseInt(f[3], 10) || 0;
+    SCAN.pathSrc = "";
+    try { SCAN.pathSrc = decodeURIComponent(f[5] || ""); } catch (e3) { SCAN.pathSrc = f[5] || ""; }
     SCAN.rows = [];
     var body = f[4] || "";
     if (body) {
@@ -314,6 +318,7 @@
       }
       if (kind === "array") return "FG_MOGRAPH.create(" + q("array") + "," + intField("arrN", 6) + "," + q("") + ",0,0)";
       if (kind === "linear") return "FG_MOGRAPH.create(" + q("linear") + "," + intField("linN", 5) + "," + q("") + ",0,0)";
+      if (kind === "path") return "FG_MOGRAPH.create(" + q("path") + "," + intField("pathN", 8) + "," + q("") + ",0,0)";
       if (kind === "field" || kind === "step" || kind === "noise") {
         return "FG_MOGRAPH.create(" + q(kind) + ",0," + q(mask()) + ",0,0)";
       }
@@ -430,7 +435,7 @@
     }
   });
 
-  var DEFAULTS = { gridX: 3, gridY: 3, arrN: 6, linN: 5 };
+  var DEFAULTS = { gridX: 3, gridY: 3, arrN: 6, linN: 5, pathN: 8 };
 
   document.addEventListener("focusout", function (ev) {
     var t = ev.target;

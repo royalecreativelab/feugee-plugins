@@ -352,7 +352,14 @@ var FG_MOTION = (function () {
                 targetMid = (targetMin + targetMax) / 2;
             }
 
-            var dest = (mode === "min") ? targetMin : (mode === "max") ? targetMax : targetMid;
+            // if/else, not a chained ternary: ExtendScript parses a ? b : c ? d : e
+            // as (a ? b : c) ? d : e, which sent "min" to targetMax.
+            var dest = targetMid;
+            if (mode === "min") {
+                dest = targetMin;
+            } else if (mode === "max") {
+                dest = targetMax;
+            }
 
             for (var j = 0; j < sel.length; j++) {
                 var posProp = sel[j].property("ADBE Transform Group").property("ADBE Position");

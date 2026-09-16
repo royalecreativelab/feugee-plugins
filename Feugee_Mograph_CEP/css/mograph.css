@@ -45,6 +45,9 @@
 .fgm-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
 .fgm-select option { background: var(--card); color: var(--text); }
 
+/* four cloners on one row */
+.tiles.trio.fgm-quad { grid-template-columns: repeat(4, 1fr); }
+
 /* ---------------------------------------------------------
    DEFAULT PROPERTY TOGGLES
    --------------------------------------------------------- */
@@ -124,4 +127,5 @@
 
 @media (max-width: 250px) {
   .fgm-checks { grid-template-columns: repeat(2, auto); }
+  .tiles.trio.fgm-quad { grid-template-columns: repeat(2, 1fr); }
 }
