@@ -297,7 +297,7 @@ test('popup.jsx adds only FG_FXS_POPUP and loads fxcore privately', () => {
   vm.runInContext('FG_FXS_POPUP.init("/Ext")', ctx);
   assert.deepStrictEqual(Object.keys(ctx).filter(k => !before.has(k)), ['FG_FXS_POPUP']);
   assert.strictEqual(typeof ctx.FXCore, 'undefined');
-  assert.strictEqual(ctx.FG_FXS_POPUP.version, '1.1.0');
+  assert.strictEqual(ctx.FG_FXS_POPUP.version, FX.POPUP_VERSION);
 });
 
 test('everyday effects win ties seen in AE 26.5 (blur, gb)', () => {

@@ -19,7 +19,7 @@
 
 var FG_FXS = (function () {
 
-var VERSION = "1.1.0";
+var VERSION = "1.1.1";
 var BUNDLE_ID = "com.feugee.fxsearch";
 var EVENT_DATA = "com.feugee.fxsearch.data";
 var LAUNCHER_NAME = "Feugee FX Search.jsx";

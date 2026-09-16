@@ -10,7 +10,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **Feugelign** | `v1.4.8` | 8 files | installer script |
 | **Feugee Motion** | `v1.2.8` | 8 files | installer script |
 | **Feugee Mograph** | `v1.0.0` | 7 files | installer script |
-| **FX Search** | `v1.1.0` | 11 files | installer script |
+| **FX Search** | `v1.1.1` | 11 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -76,7 +76,7 @@ effect or preset, press Enter and it lands on **every selected layer**.
 | `Option/Alt+Enter` | apply on a new adjustment layer |
 | `Tab` | cycle All · Effects · Presets · Favorites · Commands |
 | `Cmd+S` / `Cmd+K` | favorite / alias |
-| `Esc` | clear, then close |
+| `Esc` | close (the query resets on next open) |
 
 Favorites, aliases, overrides and snapshots live in **Window › Extensions › Feugee FX Search**.
 Verified on After Effects 2026 (26.5) for macOS.

@@ -476,7 +476,7 @@ var FXCore = (function () {
     normAlias: normAlias, buildItems: buildItems, byId: byId, search: search, resolveTarget: resolveTarget,
     segments: segments, nextScope: nextScope, applyCall: applyCall, saveCall: saveCall,
     parseReply: parseReply, lit: lit, splitWords: splitWords, snapshot: snapshot,
-    popupScript: popupScript, POPUP_VERSION: "1.1.0"
+    popupScript: popupScript, POPUP_VERSION: "1.1.1"
   };
 })();
 

@@ -17,7 +17,7 @@
 
 var FG_FXS_POPUP = (function () {
 
-var VERSION = "1.1.0";
+var VERSION = "1.1.1";
 var W = 640;
 var ROWS = 10;
 var ROW_H = 30;
@@ -30,8 +30,16 @@ var S = {
     items: [], map: {}, stamp: "", data: null, ctx: null,
     scope: "all", results: [], active: 0, top: 0,
     status: "", statusKind: "", shownAt: 0, busy: false,
-    alt: false, shift: false, scopeHits: []
+    alt: false, shift: false, scopeHits: [],
+    stripe: null, disposing: false, draws: 0, log: []
 };
+
+// ring buffer of recent events - read with FG_FXS_POPUP.state().log when a
+// bug only shows up by hand (keyboard input cannot be scripted on macOS)
+function trace(msg) {
+    S.log.push(now() % 100000 + " " + msg);
+    if (S.log.length > 40) S.log.shift();
+}
 
 // ==========================================================
 // ES3 GUARDS  (AE 26.5 has these; older engines may not)
@@ -130,12 +138,37 @@ function drawFit(g, s, x, y, font, color, maxW) {
     return draw(g, n < s.length ? s.substring(0, n) + GLYPH.ell : s, x, y, font, color);
 }
 
-// Repaint a custom-drawn element. ScriptUI has no invalidate(); toggling
-// visibility is the dependable way to get onDraw called again.
+// Repaint a custom-drawn element. Measured on AE 26.5:
+//   - reassigning the background brush invalidates it (+1 onDraw) and never
+//     touches visibility
+//   - hide()/show() also redraws, but a native Escape landing between the two
+//     left every custom element hidden - blank popup, reported by Rijal
+//   - notify("onDraw") aborts the whole script silently
+var CLEAR = [0, 0, 0, 0];
 function repaint(el) {
     if (!el || !S.win || !S.win.visible) return;
-    el.hide();
-    el.show();
+    try {
+        el.graphics.backgroundColor = el.graphics.newBrush(el.graphics.BrushType.SOLID_COLOR, CLEAR);
+        S.draws++;
+    } catch (e) {
+        trace("repaint failed: " + e);
+    }
+}
+
+function customElements() {
+    return [S.stripe, S.scopes, S.target, S.list, S.foot];
+}
+
+// never trust the previous session of the window: whatever interrupted it,
+// every custom element is visible and redrawn when the popup opens
+function heal() {
+    var els = customElements();
+    for (var i = 0; i < els.length; i++) {
+        if (els[i] && !els[i].visible) {
+            trace("heal: element " + i + " was hidden");
+            els[i].visible = true;
+        }
+    }
 }
 
 // ==========================================================
@@ -175,6 +208,7 @@ function info(msg) {
 // SEARCH + SELECTION
 // ==========================================================
 function runSearch() {
+    S.query = S.field.text;
     S.results = FX.search(S.items, S.field.text, { scope: S.scope, data: S.data, map: S.map, limit: 80 });
     S.active = 0;
     S.top = 0;
@@ -536,9 +570,9 @@ function build() {
     win.margins = 0;
     win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, C.bg);
 
-    var stripe = win.add("group");
-    stripe.preferredSize = [W, 2];
-    stripe.onDraw = drawStripe;
+    S.stripe = win.add("group");
+    S.stripe.preferredSize = [W, 2];
+    S.stripe.onDraw = drawStripe;
 
     var head = win.add("group");
     head.margins = [16, 12, 16, 8];
@@ -578,8 +612,14 @@ function build() {
 
     // ---------- keyboard ----------
     S.field.onChanging = function () { runSearch(); };
+    // macOS text fields can change the text without onChanging (native
+    // cancel on Escape); resync whenever the field reports an edit
+    S.field.onChange = function () {
+        if (S.field.text !== S.query) { trace("onChange resync"); runSearch(); }
+    };
     S.field.addEventListener("keydown", function (e) {
         var k = e.keyName;
+        trace("key " + k + (e.altKey ? "+alt" : "") + (e.shiftKey ? "+shift" : "") + ((e.metaKey || e.ctrlKey) ? "+mod" : ""));
         var mod = e.metaKey || e.ctrlKey;
         if (k === "Down") { move(1); e.preventDefault(); return; }
         if (k === "Up") { move(-1); e.preventDefault(); return; }
@@ -596,8 +636,9 @@ function build() {
             return;
         }
         if (k === "Escape") {
+            // one press closes; the query is reset on the next open
             e.preventDefault();
-            if (S.field.text) { S.field.text = ""; runSearch(); } else hide();
+            hide();
             return;
         }
         if (mod && (k === "S" || k === "s")) { e.preventDefault(); toggleFavorite(); return; }
@@ -632,12 +673,26 @@ function build() {
         S.field.active = true;
     });
 
+    // Escape while focus sits on the list or scope strip
+    win.addEventListener("keydown", function (e) {
+        if (e.keyName === "Escape" && e.target !== S.field) { trace("win Escape"); e.preventDefault(); hide(); }
+    });
+    // any native close (Escape on some macOS builds, the close button)
+    // becomes our hide, so the window object and its state stay valid
+    win.onClose = function () {
+        if (S.disposing) return true;
+        trace("native close -> hide");
+        hide();
+        return false;
+    };
+
     // ---------- focus ----------
     win.onActivate = function () {
         refreshContext();
         repaint(S.target);
     };
     win.onDeactivate = function () {
+        trace("deactivate");
         S.alt = S.shift = false;
         if (S.busy || !S.data || !S.data.settings.closeOnBlur) return;
         if (now() - S.shownAt < 500) return;     // macOS can blink focus while showing
@@ -686,24 +741,32 @@ function show() {
     S.results = FX.search(S.items, "", { scope: S.scope, data: S.data, map: S.map, limit: 80 });
     S.active = 0;
     S.top = 0;
+    S.query = "";
     S.shownAt = now();
     S.win.show();
+    heal();
     renderAll();
     S.field.active = true;
+    trace("show");
     S.lastShowMs = now() - t0;
     S.shows = (S.shows || 0) + 1;
     return "shown";
 }
 
 function hide() {
-    if (S.win && S.win.visible) S.win.hide();
+    if (S.win && S.win.visible) {
+        trace("hide");
+        S.win.hide();
+    }
 }
 
 // an older version is being replaced: close its window instead of leaking it
 function dispose() {
     if (S.win) {
+        S.disposing = true;
         try { S.win.close(); } catch (e) {}
         S.win = null;
+        S.disposing = false;
     }
     return "disposed";
 }
@@ -711,7 +774,29 @@ function dispose() {
 function state() {
     return { version: VERSION, built: !!S.win, visible: !!(S.win && S.win.visible), items: S.items.length,
              results: S.results.length, active: S.active, lastShowMs: S.lastShowMs, shows: S.shows || 0,
-             builtAt: S.builtAt, stamp: S.stamp };
+             builtAt: S.builtAt, stamp: S.stamp, query: S.win ? S.field.text : "", draws: S.draws,
+             hidden: hiddenElements(), log: S.log.slice(0) };
+}
+
+function hiddenElements() {
+    var out = [];
+    var els = customElements();
+    for (var i = 0; i < els.length; i++) if (els[i] && !els[i].visible) out.push(i);
+    return out;
+}
+
+// test hook: type a query and press keys through the real handlers
+// (native macOS text behaviour is not reproduced - that still needs a hand)
+function simulate(text, keys) {
+    if (!S.win || !S.win.visible) return "not visible";
+    S.field.text = text;
+    runSearch();
+    for (var i = 0; i < (keys || []).length; i++) {
+        var ev = ScriptUI.events.createEvent("KeyboardEvent");
+        ev.initKeyboardEvent("keydown", true, true, S.field, keys[i], 0, "");
+        S.field.dispatchEvent(ev);
+    }
+    return state();
 }
 
 // test hook: run a query without touching the window
@@ -719,6 +804,7 @@ function query(q, scope) {
     return FX.search(S.items, q, { scope: scope || "all", data: S.data || FX.emptyData(), map: S.map, limit: 80 });
 }
 
-return { version: VERSION, init: init, warm: warm, show: show, hide: hide, dispose: dispose, state: state, query: query };
+return { version: VERSION, init: init, warm: warm, show: show, hide: hide, dispose: dispose, state: state,
+         query: query, simulate: simulate };
 
 })();
