@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ExtensionManifest
+  Version="6.0"
+  ExtensionBundleId="com.feugee.fxsearch"
+  ExtensionBundleVersion="1.1.0"
+  ExtensionBundleName="Feugee FX Search"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <!--
+    Two extensions, one bundle:
+      .panel    library - favorites, aliases, overrides, snapshots, settings
+      .hub      invisible, starts with AE, installs the launcher, warms the popup
+    The Ctrl+Space popup itself is native ScriptUI (jsx/popup.jsx): a CEP
+    window cannot be hidden, and booting one per keypress costs 1.2-1.5 s.
+  -->
+  <ExtensionList>
+    <Extension Id="com.feugee.fxsearch.panel" Version="1.1.0" />
+    <Extension Id="com.feugee.fxsearch.hub" Version="1.1.0" />
+  </ExtensionList>
+
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="AEFT" Version="[0.0,99.9]" />
+    </HostList>
+    <LocaleList>
+      <Locale Code="All" />
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="9.0" />
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+
+  <DispatchInfoList>
+
+    <Extension Id="com.feugee.fxsearch.panel">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./index.html</MainPath>
+          <ScriptPath>./jsx/host.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--v=0</Parameter>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>Feugee FX Search</Menu>
+          <Geometry>
+            <Size>
+              <Width>360</Width>
+              <Height>600</Height>
+            </Size>
+            <MinSize>
+              <Width>190</Width>
+              <Height>160</Height>
+            </MinSize>
+            <MaxSize>
+              <Width>2400</Width>
+              <Height>2400</Height>
+            </MaxSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <Extension Id="com.feugee.fxsearch.hub">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./hub.html</MainPath>
+          <ScriptPath>./jsx/host.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--v=0</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>false</AutoVisible>
+          <StartOn>
+            <Event>applicationActivate</Event>
+            <Event>com.adobe.csxs.events.ApplicationActivate</Event>
+          </StartOn>
+        </Lifecycle>
+        <UI>
+          <Type>Custom</Type>
+          <Geometry>
+            <Size>
+              <Width>1</Width>
+              <Height>1</Height>
+            </Size>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+  </DispatchInfoList>
+</ExtensionManifest>

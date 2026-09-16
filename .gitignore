@@ -10,3 +10,6 @@ __MACOSX/
 Thumbs.db
 staging/
 *.log
+
+# Python
+__pycache__/

@@ -27,6 +27,7 @@ $PLUGINS = @(
   [pscustomobject]@{ slug = 'feugelign';     id = 'com.feugee.feugelign';     name = 'Feugelign' }
   [pscustomobject]@{ slug = 'feugeemotion';  id = 'com.feugee.motion';        name = 'Feugee Motion' }
   [pscustomobject]@{ slug = 'mograph';       id = 'com.feugee.mograph';       name = 'Feugee Mograph' }
+  [pscustomobject]@{ slug = 'fxsearch';      id = 'com.feugee.fxsearch';      name = 'Feugee FX Search' }
 )
 
 $USER_EXT = Join-Path $env:APPDATA 'Adobe\CEP\extensions'

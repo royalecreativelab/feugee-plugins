@@ -10,6 +10,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **Feugelign** | `v1.4.8` | 8 files | installer script |
 | **Feugee Motion** | `v1.2.8` | 8 files | installer script |
 | **Feugee Mograph** | `v1.0.0` | 7 files | installer script |
+| **FX Search** | `v1.1.0` | 11 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -27,7 +28,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download and unzip [`install/Install-Feugee-Plugins.zip`](install/Install-Feugee-Plugins.zip) *(the `.zip` preserves macOS executable permissions)*.
   3. Right-click `Install-Feugee-Plugins.command` → **Open** → **Open** (first run only, Gatekeeper asks once).
-  4. Wait for `4/4 plugins installed`.
+  4. Wait for `6/6 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
 **Windows** — Choose one of the two options:
@@ -42,7 +43,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download [`install/Install-Feugee-Plugins.bat`](install/Install-Feugee-Plugins.bat) *(right-click → **Save link as…**)*.
   3. Double-click it. If SmartScreen warns, choose **More info → Run anyway** — the installer is unsigned.
-  4. Wait for `4/4 plugins installed`.
+  4. Wait for `6/6 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
   No administrator rights needed. The `.bat` downloads the PowerShell installer
@@ -55,6 +56,30 @@ The installer writes into the **per-user** CEP folder
 `PlayerDebugMode`. Both are required for live updates: After Effects cannot
 write to the system-wide folder a ZXP installer uses, and a panel patched in
 place no longer matches its ZXP signature.
+
+---
+## FX Search — keyboard shortcut setup
+
+FX Search is a popup, not a panel: press a shortcut in the timeline, type an
+effect or preset, press Enter and it lands on **every selected layer**.
+
+1. After installing, start After Effects **twice** — the first launch writes
+   `File › Scripts › Feugee FX Search.jsx`, the second makes it show up in the menu.
+2. **Edit › Keyboard Shortcuts**, search `Feugee FX Search`, assign **Ctrl+Space**.
+3. macOS only: turn off *Select the previous input source* in
+   System Settings › Keyboard › Keyboard Shortcuts › Input Sources — it also uses Ctrl+Space.
+
+| Key | Action |
+|---|---|
+| `Enter` | apply to all selected layers |
+| `Shift+Enter` | apply and keep the popup open |
+| `Option/Alt+Enter` | apply on a new adjustment layer |
+| `Tab` | cycle All · Effects · Presets · Favorites · Commands |
+| `Cmd+S` / `Cmd+K` | favorite / alias |
+| `Esc` | clear, then close |
+
+Favorites, aliases, overrides and snapshots live in **Window › Extensions › Feugee FX Search**.
+Verified on After Effects 2026 (26.5) for macOS.
 
 ---
 

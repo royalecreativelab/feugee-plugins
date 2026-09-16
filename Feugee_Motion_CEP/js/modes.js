@@ -422,6 +422,7 @@
     else if (/sidequest/i.test(fullText)) slug = "sidequest";
     else if (/feugelign/i.test(fullText)) slug = "feugelign";
     else if (/mograph/i.test(fullText)) slug = "mograph";
+    else if (/fx\s*search/i.test(fullText)) slug = "fxsearch";
     else if (/motion/i.test(fullText)) slug = "feugeemotion";
 
     var verMatch = fullText.match(/v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)/i);
@@ -517,7 +518,8 @@
     "com.feugee.knowledgenuke": "knowledgenuke",
     "com.feugee.sidequest": "sidequest",
     "com.feugee.motion": "feugeemotion",
-    "com.feugee.mograph": "mograph"
+    "com.feugee.mograph": "mograph",
+    "com.feugee.fxsearch": "fxsearch"
   };
 
   var TIMEOUT_MANIFEST = 12000;
@@ -838,7 +840,11 @@
       var mE = xml.match(/<Extension\s+Id="([^"]+)"/);
       if (mB) {
         info.bundleId = mB[1];
-        if (SLUG_BY_BUNDLE[mB[1]]) info.slug = SLUG_BY_BUNDLE[mB[1]];
+        // The manifest is the identity. An unknown bundle must never inherit
+        // the brand-text fallback: that fallback is "feugelign", and a new
+        // plugin missing from this table used to be force-"updated" with
+        // Feugelign's files (happened to FX Search on its first launch).
+        info.slug = SLUG_BY_BUNDLE[mB[1]] || mB[1].replace(/^com\.feugee\./, "");
       }
       if (mV) info.version = mV[1];
       if (mE) info.extensionId = mE[1];

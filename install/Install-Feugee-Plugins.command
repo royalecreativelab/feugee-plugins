@@ -40,7 +40,8 @@ var PLUGINS = [
   { slug: 'sidequest',     id: 'com.feugee.sidequest',     name: 'SideQuest' },
   { slug: 'feugelign',     id: 'com.feugee.feugelign',     name: 'Feugelign' },
   { slug: 'feugeemotion',  id: 'com.feugee.motion',        name: 'Feugee Motion' },
-  { slug: 'mograph',       id: 'com.feugee.mograph',       name: 'Feugee Mograph' }
+  { slug: 'mograph',       id: 'com.feugee.mograph',       name: 'Feugee Mograph' },
+  { slug: 'fxsearch',      id: 'com.feugee.fxsearch',      name: 'Feugee FX Search' }
 ];
 
 var app = Application.currentApplication();
