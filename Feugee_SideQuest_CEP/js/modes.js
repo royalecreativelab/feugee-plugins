@@ -1342,8 +1342,7 @@
   }
 
   // ---------------------------------------------------------
-  // DECORATIVE 8-BIT PIXEL MARQUEE TICKER
-  // "andro anying cukingana"
+  // DECORATIVE 8-BIT PIXEL MARQUEE TICKER (icons only)
   // ---------------------------------------------------------
   function initTicker() {
     try {
@@ -1355,30 +1354,30 @@
       ticker.id = "feugeeTicker";
       ticker.className = "feugee-ticker";
       ticker.setAttribute("role", "marquee");
-      ticker.setAttribute("aria-label", "andro anying cukingana");
+      ticker.setAttribute("aria-hidden", "true");
 
       var track = document.createElement("div");
       track.className = "feugee-ticker-track";
 
-      var textGroup =
+      // icons only now, so one group is short: repeat it until a segment is
+      // wider than any panel, or the loop shows an empty gap
+      var iconGroup =
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-spark">✦</span> ' +
-          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-ghost">👾</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>' +
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-star">★</span> ' +
-          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-bolt">⚡</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>' +
         '<span class="ticker-item">' +
           '<span class="pixel-icon icon-spark">✦</span> ' +
-          '<span class="pixel-text">andro anying cukingana</span> ' +
           '<span class="pixel-icon icon-heart">♥</span> ' +
           '<span class="pixel-dot">■</span>' +
         '</span>';
+      var textGroup = new Array(9).join(iconGroup);
 
       var seg1 = document.createElement("div");
       seg1.className = "feugee-ticker-segment";

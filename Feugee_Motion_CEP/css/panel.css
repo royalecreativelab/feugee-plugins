@@ -241,7 +241,7 @@ body {
   display: flex;
   width: max-content;
   will-change: transform;
-  animation: feugeePixelMarquee 18s steps(260, end) infinite;
+  animation: feugeePixelMarquee 50s steps(720, end) infinite;
 }
 
 .feugee-ticker:hover .feugee-ticker-track {

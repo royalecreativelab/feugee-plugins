@@ -5,13 +5,13 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 <!-- TABLE -->
 | Plugin | Version | Payload | Download |
 |---|---|---|---|
-| **Knowledge Nuke** | `v3.3.8` | 6 files | installer script |
-| **SideQuest** | `v1.6.8` | 8 files | installer script |
-| **Feugelign** | `v1.4.9` | 8 files | installer script |
-| **Feugee Motion** | `v1.2.9` | 8 files | installer script |
-| **Feugee Mograph** | `v1.1.0` | 7 files | installer script |
-| **FX Search** | `v1.1.2` | 11 files | installer script |
-| **Feugelord (Beta)** | `v1.0.0` | 9 files | installer script |
+| **Knowledge Nuke** | `v3.3.9` | 6 files | installer script |
+| **SideQuest** | `v1.6.9` | 8 files | installer script |
+| **Feugelign** | `v1.4.10` | 8 files | installer script |
+| **Feugee Motion** | `v1.2.10` | 8 files | installer script |
+| **Feugee Mograph** | `v1.1.1` | 7 files | installer script |
+| **FX Search** | `v1.1.3` | 11 files | installer script |
+| **Feugelord (Beta)** | `v1.0.1` | 9 files | installer script |
 <!-- /TABLE -->
 
 ---

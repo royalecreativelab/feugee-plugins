@@ -2,7 +2,7 @@
 <ExtensionManifest
   Version="6.0"
   ExtensionBundleId="com.feugee.feugelord"
-  ExtensionBundleVersion="1.0.0"
+  ExtensionBundleVersion="1.0.1"
   ExtensionBundleName="Feugee Feugelord"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
@@ -13,8 +13,8 @@
               lands in the outbox - so a push works without the AE panel open.
   -->
   <ExtensionList>
-    <Extension Id="com.feugee.feugelord.panel" Version="1.0.0" />
-    <Extension Id="com.feugee.feugelord.hub" Version="1.0.0" />
+    <Extension Id="com.feugee.feugelord.panel" Version="1.0.1" />
+    <Extension Id="com.feugee.feugelord.hub" Version="1.0.1" />
   </ExtensionList>
 
   <ExecutionEnvironment>
