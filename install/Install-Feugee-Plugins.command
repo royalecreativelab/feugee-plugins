@@ -34,7 +34,11 @@ fi
 /usr/bin/osascript -l JavaScript <<'JXA'
 ObjC.import('Foundation');
 
-var RAW = 'https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/';
+// FEUGEE_BRANCH lets a maintainer test a branch before it reaches main:
+//   FEUGEE_BRANCH=feat/x bash Install-Feugee-Plugins.command
+var ENV = ObjC.deepUnwrap($.NSProcessInfo.processInfo.environment);
+var BRANCH = ENV.FEUGEE_BRANCH || 'main';
+var RAW = 'https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/' + BRANCH + '/';
 var PLUGINS = [
   { slug: 'knowledgenuke', id: 'com.feugee.knowledgenuke', name: 'Knowledge Nuke' },
   { slug: 'sidequest',     id: 'com.feugee.sidequest',     name: 'SideQuest' },
@@ -42,7 +46,8 @@ var PLUGINS = [
   { slug: 'feugeemotion',  id: 'com.feugee.motion',        name: 'Feugee Motion' },
   { slug: 'mograph',       id: 'com.feugee.mograph',       name: 'Feugee Mograph' },
   { slug: 'fxsearch',      id: 'com.feugee.fxsearch',      name: 'Feugee FX Search' },
-  { slug: 'feugelord',     id: 'com.feugee.feugelord',     name: 'Feugee Feugelord' }
+  { slug: 'feugelord',     id: 'com.feugee.feugelord',     name: 'Feugee Feugelord' },
+  { slug: 'hermesbridge',  id: 'com.feugee.hermesbridge',  name: 'Hermes Bridge (Beta)' }
 ];
 
 var app = Application.currentApplication();
@@ -95,7 +100,7 @@ function debugXml(id, port) {
 var tmp = ObjC.unwrap($.NSTemporaryDirectory()) + 'feugee-install';
 mkdirp(tmp);
 
-say('  target: ' + USER_EXT);
+say('  target: ' + USER_EXT + (BRANCH !== 'main' ? '   [branch ' + BRANCH + ']' : ''));
 say('');
 
 var installed = 0;

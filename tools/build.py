@@ -29,7 +29,11 @@ PLUGINS = [
     ("Feugee_Mograph_CEP", "mograph", "Feugee Mograph", "Feugee_Mograph"),
     ("Feugee_FXSearch_CEP", "fxsearch", "FX Search", "Feugee_FXSearch"),
     ("Feugee_Feugelord_CEP", "feugelord", "Feugelord (Beta)", "Feugee_Feugelord"),
+    ("Feugee_HermesBridge_CEP", "hermesbridge", "Hermes Bridge (Beta)", "Feugee_HermesBridge"),
 ]
+
+# Plugins that keep their own modes.js/panel.css copy out of --sync-modes is
+# none: every panel shares the canonical pair byte-for-byte.
 
 SKIP_NAMES = {".DS_Store", ".debug", "feugee-update.log", ".feugee-write-test",
               "Thumbs.db", "feugee-update-config.json"}

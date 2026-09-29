@@ -12,6 +12,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **Feugee Mograph** | `v1.1.1` | 7 files | installer script |
 | **FX Search** | `v1.1.3` | 11 files | installer script |
 | **Feugelord (Beta)** | `v1.0.1` | 9 files | installer script |
+| **Hermes Bridge (Beta)** | `v2.2.0` | 12 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -29,7 +30,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download and unzip [`install/Install-Feugee-Plugins.zip`](install/Install-Feugee-Plugins.zip) *(the `.zip` preserves macOS executable permissions)*.
   3. Right-click `Install-Feugee-Plugins.command` → **Open** → **Open** (first run only, Gatekeeper asks once).
-  4. Wait for `7/7 plugins installed`.
+  4. Wait for `8/8 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
 **Windows** — Choose one of the two options:
@@ -107,6 +108,26 @@ After Effects builds the push on its own — its panel can stay closed.
 
 Verified on Illustrator 2026 (30.8) + After Effects 2026 (26.5), macOS: the render
 of a pushed test artboard matches Illustrator's export to 0.17/255 mean difference.
+
+---
+## Hermes Bridge (Beta) — AI agent inside After Effects
+
+> **Beta, macOS only.** Chat with an AI agent that reads and edits the open comp.
+
+The panel runs [Hermes Agent](https://hermes-agent.nousresearch.com) locally and gives it
+After Effects tools (read comp/layers, run ExtendScript, check expression errors,
+render a frame). Every script is **one undo group**, so Cmd+Z reverts it.
+
+**First run** — open **Window › Extensions › Hermes Bridge**; the panel walks you through:
+
+1. **Install Hermes** — opens Terminal with the official installer.
+2. **Profile** — the panel creates its own `aebridge` profile automatically.
+3. **Login model** — opens `hermes -p aebridge model` in Terminal. Pick a provider
+   (Nous Portal, Anthropic, OpenAI, OpenRouter, …) and use **your own** account or key.
+   Keys are typed in Terminal and stored by Hermes; the panel never sees them.
+
+Then click **CEK LAGI**. Switch models any time with the chip or **Cmd+K**.
+You pay your own provider for usage.
 
 ---
 
@@ -192,6 +213,7 @@ Works on both platforms, no scripts.
 | Feugelign | `feugelign` | `com.feugee.feugelign` |
 | Feugee Motion | `feugeemotion` | `com.feugee.motion` |
 | Feugee Mograph | `mograph` | `com.feugee.mograph` |
+| Hermes Bridge (Beta, macOS) | `hermesbridge` | `com.feugee.hermesbridge` |
 
 ---
 
