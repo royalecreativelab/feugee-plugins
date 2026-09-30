@@ -37,7 +37,7 @@
   </svg>
   <div class="brand-text">
     <h1>FEUGEE STUDIO</h1>
-    <p>Hermes Bridge <b>v2.2.0</b></p>
+    <p>Hermes Bridge <b>v2.3.0</b></p>
   </div>
 </header>
 
@@ -46,7 +46,7 @@
   <!-- ================= 01 HERMES ================= -->
   <section class="card span" data-accent="orange">
     <div class="card-head"><i class="bar"></i><span class="num">01</span><h2>HERMES</h2>
-      <button class="hb-mchip" id="modelChip" title="Ganti model (Cmd+K)"><i class="dot"></i><span id="modelName">-</span><em id="modelProv"></em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button class="hb-mchip" id="modelChip" title="Ganti model (Cmd/Ctrl+K)"><i class="dot"></i><span id="modelName">-</span><em id="modelProv"></em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
     <div class="hb-picker" id="picker" hidden></div>
     <p class="meta" id="metaChat">Starting agent...</p>
@@ -69,7 +69,7 @@
       <textarea id="input" placeholder="Perintah buat Hermes..." spellcheck="false"></textarea>
       <button class="tile hb-send" id="send" title="Kirim (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-5 16-3.5-6.5z"/><path d="M11.5 13.5 20 4"/></svg><span>SEND</span></button>
     </div>
-    <div class="hb-hint"><span>Enter kirim - Esc stop - Cmd+K model</span><span id="usage"></span></div>
+    <div class="hb-hint"><span id="hintKeys">Enter kirim - Esc stop - Cmd+K model</span><span id="usage"></span></div>
   </section>
 
   <!-- ================= 02 QUICK ================= -->

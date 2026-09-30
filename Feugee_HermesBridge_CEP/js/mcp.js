@@ -53,7 +53,7 @@
     },
     {
       name: "run_script",
-      description: "Run ExtendScript inside After Effects as ONE undo group (the user can Cmd+Z it). The value of the last expression is returned. ExtendScript is ES3: var only, no let/const/arrow functions/template strings, no JSON object. Put a whole change in one script and end it with a short summary string. Never save/close the project, purge, or delete comps/footage unless explicitly asked.",
+      description: "Run ExtendScript inside After Effects as ONE undo group (the user can undo it with Cmd/Ctrl+Z). The value of the last expression is returned. ExtendScript is ES3: var only, no let/const/arrow functions/template strings, no JSON object. Put a whole change in one script and end it with a short summary string. Never save/close the project, purge, or delete comps/footage unless explicitly asked.",
       inputSchema: { type: "object", required: ["code"], properties: {
         code: { type: "string", description: "ExtendScript source." },
         undo_name: { type: "string", description: "Label shown in Edit > Undo (default 'Hermes')." }

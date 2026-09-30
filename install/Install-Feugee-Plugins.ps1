@@ -19,7 +19,10 @@ try {
     [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 } catch { }
 
-$RAW = 'https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/main/'
+# FEUGEE_BRANCH lets a maintainer test a branch before it reaches main:
+#   $env:FEUGEE_BRANCH = 'feat/x'; irm <raw url of this file on that branch> | iex
+$BRANCH = if ($env:FEUGEE_BRANCH) { $env:FEUGEE_BRANCH } else { 'main' }
+$RAW = 'https://raw.githubusercontent.com/royalecreativelab/feugee-plugins/' + $BRANCH + '/'
 
 $PLUGINS = @(
   [pscustomobject]@{ slug = 'knowledgenuke'; id = 'com.feugee.knowledgenuke'; name = 'Knowledge Nuke' }
@@ -29,6 +32,7 @@ $PLUGINS = @(
   [pscustomobject]@{ slug = 'mograph';       id = 'com.feugee.mograph';       name = 'Feugee Mograph' }
   [pscustomobject]@{ slug = 'fxsearch';      id = 'com.feugee.fxsearch';      name = 'Feugee FX Search' }
   [pscustomobject]@{ slug = 'feugelord';     id = 'com.feugee.feugelord';     name = 'Feugee Feugelord' }
+  [pscustomobject]@{ slug = 'hermesbridge';  id = 'com.feugee.hermesbridge';  name = 'Hermes Bridge (Beta)' }
 )
 
 $USER_EXT = Join-Path $env:APPDATA 'Adobe\CEP\extensions'
@@ -110,7 +114,8 @@ if (Get-Process -Name 'AfterFX' -ErrorAction SilentlyContinue) {
 $tmp = Join-Path $env:TEMP ('feugee-install-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 
-Say ('  target: ' + $USER_EXT)
+$branchNote = if ($BRANCH -ne 'main') { '   [branch ' + $BRANCH + ']' } else { '' }
+Say ('  target: ' + $USER_EXT + $branchNote)
 Say ''
 
 $installed = 0

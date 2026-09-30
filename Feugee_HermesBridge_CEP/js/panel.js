@@ -34,10 +34,12 @@
   var modeCtx = $("modeCtx"), modeAuto = $("modeAuto"), modeLog = $("modeLog");
   var chip = $("modelChip"), chipName = $("modelName"), chipProv = $("modelProv");
 
-  var BASE = path.join(window.Acp.HOME, "Library", "Application Support", "HermesBridge");
+  var S = window.HBSetup;
+  var MOD = S.MOD;   // "Cmd" on macOS, "Ctrl" on Windows
+  var BASE = S.BASE;
   var EXT_DIR = (function () {
-    try { if (window.__adobe_cep__) return window.__adobe_cep__.getSystemPath("extension"); } catch (e) {}
-    return decodeURIComponent(location.pathname).replace(/\/index\.html$/, "");
+    try { if (window.__adobe_cep__) return S.urlToPath(window.__adobe_cep__.getSystemPath("extension")); } catch (e) {}
+    return S.urlToPath(location.href.split(/[?#]/)[0]).replace(/[\\\/]index\.html$/i, "");
   })();
   var FRAMES = path.join(BASE, "frames");
   var ATTACH = path.join(BASE, "attachments");
@@ -87,7 +89,7 @@
     var id = acp.currentModel || wanted, e = modelInfo(id);
     chipName.textContent = e.label;
     chipProv.textContent = e.providerLabel;
-    chip.title = id + " - klik untuk ganti (Cmd+K)";
+    chip.title = id + " - klik untuk ganti (" + MOD + "+K)";
     chip.classList.toggle("switching", st.switching || st.booting);
     chip.classList.toggle("bad", !!store.health(id));
     metaSession.textContent = e.label + " - " + (e.providerLabel || "") + (acp.sessionId ? " - " + String(acp.sessionId).slice(0, 8) : "");
@@ -697,7 +699,7 @@
   attachBar.className = "hb-attach";
   input.parentNode.parentNode.insertBefore(attachBar, input.parentNode);
 
-  function fileUrl(p) { return "file://" + encodeURI(p); }
+  function fileUrl(p) { return S.fileUrl(p); }
   function attachName(ext) { return path.join(ATTACH, "img_" + Date.now() + "_" + Math.floor(Math.random() * 1e4) + "." + ext); }
 
   function paintAttachments() {
@@ -762,7 +764,7 @@
   }
 
   function copyImageFile(src) {
-    src = decodeURIComponent(String(src).replace(/^file:\/\//, ""));
+    src = S.urlToPath(src);
     try {
       fs.mkdirSync(ATTACH, { recursive: true });
       var ext = (src.match(/\.([a-z0-9]+)$/i) || [, "png"])[1].toLowerCase();
@@ -771,7 +773,7 @@
       addAttachment(p);
       return true;
     } catch (e) {
-      note("gambar tidak bisa dibaca (" + (e.code || e.message) + "). Coba screenshot (Cmd+Shift+Ctrl+4) lalu paste, atau drag file-nya ke sini.", true);
+      note("gambar tidak bisa dibaca (" + (e.code || e.message) + "). Coba screenshot (" + (S.IS_WIN ? "Win+Shift+S" : "Cmd+Shift+Ctrl+4") + ") lalu paste, atau drag file-nya ke sini.", true);
       return false;
     }
   }
@@ -846,7 +848,7 @@
         pre.className = "res" + (/^ERR:/.test(res) ? " err" : "");
         pre.textContent = res;
         t.parentNode.parentNode.insertBefore(pre, t.parentNode.nextSibling);
-        setStatus(/^ERR:/.test(res) ? "Script error - lihat hasil" : "Script selesai (Cmd+Z untuk batal)", /^ERR:/.test(res) ? "err" : "ok");
+        setStatus(/^ERR:/.test(res) ? "Script error - lihat hasil" : "Script selesai (" + MOD + "+Z untuk batal)", /^ERR:/.test(res) ? "err" : "ok");
         refreshMeta();
       });
       return;
@@ -921,6 +923,7 @@
   setInterval(refreshMeta, 1500);
   refreshMeta();
   paintChip();
-  note("Hermes Bridge 2.1 - Hermes pegang AE lewat tool MCP (get comp/layer, run script, render frame). Tiap script = 1 undo group. Ganti model: chip, Cmd+K, atau /model.");
+  try { $("hintKeys").textContent = "Enter kirim - Esc stop - " + MOD + "+K model"; } catch (e) {}
+  note("Hermes Bridge 2.2 - Hermes pegang AE lewat tool MCP (get comp/layer, run script, render frame). Tiap script = 1 undo group. Ganti model: chip, " + MOD + "+K, atau /model.");
   boot();
 })();

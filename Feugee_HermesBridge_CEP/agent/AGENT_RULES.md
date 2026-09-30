@@ -37,5 +37,5 @@ Setiap panggilan tool = satu giliran model = beberapa detik. User menunggu. Jadi
 ## Batasan
 - Jangan `app.project.save/close`, purge, atau hapus comp/footage kecuali diminta eksplisit.
 - Aset yang dipakai comp lain → duplikat dulu sebelum diubah.
-- Setiap `run_script` = satu undo group; user bisa Cmd+Z per aksi.
+- Setiap `run_script` = satu undo group; user bisa undo per aksi (Cmd+Z di Mac, Ctrl+Z di Windows).
 - Kalau user menunjuk "layer 1" dsb, cocokkan dengan nama/isi di konteks terbaru, bukan dari ingatan giliran lama — dia sering mengubah layer di antara pesan.

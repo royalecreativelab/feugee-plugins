@@ -12,7 +12,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **Feugee Mograph** | `v1.1.1` | 7 files | installer script |
 | **FX Search** | `v1.1.3` | 11 files | installer script |
 | **Feugelord (Beta)** | `v1.0.1` | 9 files | installer script |
-| **Hermes Bridge (Beta)** | `v2.2.0` | 12 files | installer script |
+| **Hermes Bridge (Beta)** | `v2.3.0` | 12 files | installer script |
 <!-- /TABLE -->
 
 ---
@@ -45,7 +45,7 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
   1. Quit After Effects.
   2. Download [`install/Install-Feugee-Plugins.bat`](install/Install-Feugee-Plugins.bat) *(right-click → **Save link as…**)*.
   3. Double-click it. If SmartScreen warns, choose **More info → Run anyway** — the installer is unsigned.
-  4. Wait for `7/7 plugins installed`.
+  4. Wait for `8/8 plugins installed`.
   5. Open After Effects → **Window › Extensions › [Plugin Name]**.
 
   No administrator rights needed. The `.bat` downloads the PowerShell installer
@@ -112,21 +112,22 @@ of a pushed test artboard matches Illustrator's export to 0.17/255 mean differen
 ---
 ## Hermes Bridge (Beta) — AI agent inside After Effects
 
-> **Beta, macOS only.** Chat with an AI agent that reads and edits the open comp.
+> **Beta, macOS + Windows 10/11.** Chat with an AI agent that reads and edits the open comp.
 
 The panel runs [Hermes Agent](https://hermes-agent.nousresearch.com) locally and gives it
 After Effects tools (read comp/layers, run ExtendScript, check expression errors,
-render a frame). Every script is **one undo group**, so Cmd+Z reverts it.
+render a frame). Every script is **one undo group**, so Cmd+Z / Ctrl+Z reverts it.
 
 **First run** — open **Window › Extensions › Hermes Bridge**; the panel walks you through:
 
-1. **Install Hermes** — opens Terminal with the official installer.
+1. **Install Hermes** — opens Terminal (macOS) or PowerShell (Windows) with the official
+   installer (`install.sh` / `install.ps1`). Hermes Desktop also works if already installed.
 2. **Profile** — the panel creates its own `aebridge` profile automatically.
-3. **Login model** — opens `hermes -p aebridge model` in Terminal. Pick a provider
+3. **Login model** — opens `hermes -p aebridge model` in Terminal / PowerShell. Pick a provider
    (Nous Portal, Anthropic, OpenAI, OpenRouter, …) and use **your own** account or key.
-   Keys are typed in Terminal and stored by Hermes; the panel never sees them.
+   Keys are typed there and stored by Hermes; the panel never sees them.
 
-Then click **CEK LAGI**. Switch models any time with the chip or **Cmd+K**.
+Then click **CEK LAGI**. Switch models any time with the chip or **Cmd+K** / **Ctrl+K**.
 You pay your own provider for usage.
 
 ---
@@ -213,7 +214,7 @@ Works on both platforms, no scripts.
 | Feugelign | `feugelign` | `com.feugee.feugelign` |
 | Feugee Motion | `feugeemotion` | `com.feugee.motion` |
 | Feugee Mograph | `mograph` | `com.feugee.mograph` |
-| Hermes Bridge (Beta, macOS) | `hermesbridge` | `com.feugee.hermesbridge` |
+| Hermes Bridge (Beta) | `hermesbridge` | `com.feugee.hermesbridge` |
 
 ---
 

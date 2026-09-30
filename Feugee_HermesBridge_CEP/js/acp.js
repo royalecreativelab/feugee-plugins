@@ -6,44 +6,18 @@
 (function (global) {
   "use strict";
 
-  var os = require("os");
-  var HOME = os.homedir();
-  // Resolved at spawn time by js/setup.js (installer path differs per machine).
-  var HERMES_BIN = HOME + "/.local/bin/hermes";
-  var PROFILE = "aebridge";   // dedicated lean profile: vision + panel MCP only, AE-specific .hermes.md
-  var WORK_CWD = HOME + "/Library/Application Support/HermesBridge/workspace";
+  // OS specifics (paths, PATH delimiter, spawn/kill) live in js/setup.js.
+  var S = global.HBSetup;
+  var HOME = S.HOME;
+  var PROFILE = S.PROFILE;   // dedicated lean profile: vision + panel MCP only, AE-specific .hermes.md
+  var WORK_CWD = S.WORK_CWD;
 
   // Preferred model when it exists on this machine; otherwise the panel keeps
   // whatever the aebridge profile has as model.default (set via `hermes model`).
   var DEFAULT_MODEL = "custom:pecut:pecut/deepseek-v4.1-flash";
 
-  function buildEnv(opts) {
-    var fs = require("fs");
-    var parts = [
-      HOME + "/.hermes/hermes-agent/.hermes/bin",
-      HOME + "/.local/bin",
-      "/opt/homebrew/bin", "/opt/homebrew/sbin",
-      "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"
-    ];
-    try {
-      var tdir = HOME + "/.hermes/tools";
-      if (fs.existsSync(tdir)) {
-        fs.readdirSync(tdir).forEach(function (d) {
-          if (d.indexOf("node-") === 0) parts.unshift(tdir + "/" + d + "/bin");
-          else if (d.indexOf("ffmpeg-") === 0 || d.indexOf("ripgrep-") === 0) parts.unshift(tdir + "/" + d);
-        });
-      }
-    } catch (e) { /* optional */ }
-
-    var env = {
-      PATH: parts.join(":"),
-      HOME: HOME,
-      USER: process.env.USER || os.userInfo().username,
-      HERMES_HOME: HOME + "/.hermes/profiles/" + PROFILE,
-      LANG: "en_US.UTF-8",
-      LC_ALL: "en_US.UTF-8",
-      TERM: "dumb"
-    };
+  function buildEnv(bin, opts) {
+    var env = S.agentEnv(S.toolDirs(bin));
     // Figma / Google Workspace MCP are not needed inside AE: skipping them
     // saves seconds at boot and ~170 tool schemas on every turn.
     if (!opts || !opts.withMcp) env.HERMES_ACP_SKIP_CONFIGURED_MCP = "1";
@@ -87,11 +61,12 @@
 
   Acp.prototype.spawn = function (opts) {
     var inst = this;
-    var cp = require("child_process");
     inst._buf = "";
-    var bin = (global.HBSetup && global.HBSetup.findHermes()) || HERMES_BIN;
-    inst.child = cp.spawn(bin, ["acp"], {
-      env: buildEnv(opts),
+    var bin = S.findHermes();
+    if (!bin) throw new Error("Hermes CLI tidak ditemukan");
+    try { require("fs").mkdirSync(WORK_CWD, { recursive: true }); } catch (e) {}
+    inst.child = S.spawnHermes(bin, ["acp"], {
+      env: buildEnv(bin, opts),
       cwd: WORK_CWD,
       stdio: ["pipe", "pipe", "pipe"]
     });
@@ -272,7 +247,7 @@
     var c = this.child;
     this.child = null;
     this.sessionId = null;
-    if (c) { try { c.kill("SIGTERM"); } catch (e) {} }
+    if (c) S.killTree(c);
   };
 
   Acp.prototype.logTail = function (n) { return this._log.slice(-(n || 120)).join("\n"); };
