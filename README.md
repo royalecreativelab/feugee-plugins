@@ -12,7 +12,8 @@ Official CEP extension suite for Adobe After Effects by **Feugee Studio**.
 | **Feugee Mograph** | `v1.1.1` | 7 files | installer script |
 | **FX Search** | `v1.1.3` | 11 files | installer script |
 | **Feugelord (Beta)** | `v1.0.1` | 9 files | installer script |
-| **Hermes Bridge (Beta)** | `v2.3.0` | 12 files | installer script |
+| **Hermes Bridge (Beta)** | `v2.5.0` | 15 files | installer script |
+| **Hermes Bridge PR (Beta)** | `v1.2.0` | 15 files | installer script |
 <!-- /TABLE -->
 
 ---

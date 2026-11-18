@@ -1,0 +1,12 @@
+{
+  "name": "feugee-html-import",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Feugee Studio - import HTML / URLs / live captures into Figma as native, editable layers",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node build.js && node tests/e2e.js && SCHEME=dark node tests/e2e.js && node tests/builder-mock.js payload.json payload-dark.json",
+    "test:smoke": "node build.js && node tests/smoke-url.js http://127.0.0.1:8791/tests/fixtures/shell.html https://example.com/ https://www.python.org/ https://stripe.com/ && node tests/builder-mock.js",
+    "figma-run": "node tests/make-figma-run.js"
+  }
+}

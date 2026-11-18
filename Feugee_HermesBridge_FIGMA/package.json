@@ -1,0 +1,10 @@
+{
+  "name": "feugee-hermes-bridge-figma",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hermes Bridge for Figma Desktop: run Hermes MCP tools inside the open file with local fonts.",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/smoke.js"
+  }
+}

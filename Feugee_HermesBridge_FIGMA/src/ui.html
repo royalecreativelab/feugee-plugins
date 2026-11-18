@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feugee Hermes Bridge</title>
+<style>
+/*@PANEL_CSS*/
+</style>
+<style>
+/*@PLUGIN_CSS*/
+</style>
+</head>
+<body class="hbf" data-theme="dark">
+
+<header class="topbar">
+<!--@LOGO-->
+  <div class="brand-text">
+    <h1>FEUGEE STUDIO</h1>
+    <p>Hermes Bridge <b>v/*@VERSION*/</b></p>
+  </div>
+  <span class="hbf-spacer"></span>
+</header>
+
+<main class="content" id="content">
+
+  <section class="card" data-accent="orange">
+    <div class="card-head"><i class="bar"></i><span class="num">01</span><h2>CONNECTION</h2></div>
+    <dl class="hbf-kv">
+      <dt>Relay</dt><dd id="kvRelay">connecting…</dd>
+      <dt>File</dt><dd id="kvFile">-</dd>
+      <dt>Page</dt><dd id="kvPage">-</dd>
+      <dt>Calls</dt><dd id="kvCalls">0</dd>
+    </dl>
+    <p class="meta">Keep this window open while Hermes works. Running another plugin closes it.</p>
+  </section>
+
+  <section class="card" data-accent="blue">
+    <div class="card-head"><i class="bar"></i><span class="num">02</span><h2>ACTIVITY</h2></div>
+    <ol class="hbf-log" id="log"><li class="hbf-empty">No calls yet.</li></ol>
+  </section>
+
+</main>
+
+<footer class="statusbar">
+  <i class="led" id="led"></i>
+  <span id="status">Starting…</span>
+</footer>
+
+<script>
+/*@SCRIPTS*/
+</script>
+</body>
+</html>

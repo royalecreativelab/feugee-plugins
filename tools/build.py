@@ -30,6 +30,7 @@ PLUGINS = [
     ("Feugee_FXSearch_CEP", "fxsearch", "FX Search", "Feugee_FXSearch"),
     ("Feugee_Feugelord_CEP", "feugelord", "Feugelord (Beta)", "Feugee_Feugelord"),
     ("Feugee_HermesBridge_CEP", "hermesbridge", "Hermes Bridge (Beta)", "Feugee_HermesBridge"),
+    ("Feugee_HermesBridgePR_CEP", "hermesbridgepr", "Hermes Bridge PR (Beta)", "Feugee_HermesBridgePR"),
 ]
 
 # Plugins that keep their own modes.js/panel.css copy out of --sync-modes is

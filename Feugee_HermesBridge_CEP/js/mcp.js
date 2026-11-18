@@ -19,8 +19,8 @@
     "Tools that act directly on the After Effects project the user has open.",
     "Read first (get_comp / get_layer / get_project / expression_errors), then change with run_script.",
     "run_script = one undo group; batch a whole change into ONE script instead of many small calls.",
-    "A run_script summary string / empty expression_errors IS the proof - do not render frames to double-check unless the user asks to see it.",
-    "Hard cap: " + 10 + " AE tool calls per message; after that every AE tool refuses until the user replies."
+    "A run_script summary / empty expression_errors proves the script ran, not that it looks right: for any visual change, render frames at the key times (render_frame, or one run_script saveFrameToPng loop + contact sheet for many frames) and compare them against the user reference or the agreed layout before calling it done.",
+    "Stock assets: envato_search (Envato Elements catalog, own budget of 8 searches per message) -> import_media {item_url, download: true} for the item the user picked (downloads it in the user's logged-in browser, unzips, imports into an Envato folder)."
   ].join(" ");
 
   var TOOLS = [
@@ -68,10 +68,17 @@
       } }
     }
   ];
+  // Envato tools (js/envato.js, loaded before this file in the panel and by the proxy)
+  if (global.HBEnvato) TOOLS = TOOLS.concat(global.HBEnvato.toolsFor("ae"));
+  var MAX_SEARCH = 8;
 
   function AeMcpServer(opts) {
     this.evalHost = opts.evalHost;          // (expr, cb(string))
     this.frameDir = opts.frameDir;
+    this.previewDir = opts.previewDir || (opts.frameDir ? path.join(path.dirname(opts.frameDir), "envato", "previews") : null);
+    this.assetDir = opts.assetDir || (opts.frameDir ? path.join(path.dirname(opts.frameDir), "envato", "assets") : null);
+    this.downloadsDir = opts.downloadsDir || null;   // default ~/Downloads
+    this.turnSearch = 0;
     this.onCall = opts.onCall || function () {};
     this.onDone = opts.onDone || function () {};
     this.token = crypto.randomBytes(24).toString("hex");
@@ -81,10 +88,58 @@
     this.calls = 0;
     this.turnCalls = 0;
     this.maxTurnCalls = opts.maxTurnCalls || 10;
+    this.endpointFile = opts.endpointFile || null;
+    this.ownPid = opts.ownPid || function () { return 0; };
+    this.ext = { calls: 0, last: 0, backedUp: false };
+    this.maxExtCalls = opts.maxExtCalls || 30;
   }
 
+  // endpoint.json lets bin/hb-mcp-proxy.js (registered in the user's normal
+  // Hermes profile) reach this server from any Hermes surface. 0600, deleted on close.
+  AeMcpServer.prototype.writeEndpoint = function () {
+    if (!this.endpointFile) return;
+    try {
+      fs.mkdirSync(path.dirname(this.endpointFile), { recursive: true });
+      fs.writeFileSync(this.endpointFile, JSON.stringify({
+        app: "ae", url: "http://127.0.0.1:" + this.port + "/mcp", token: this.token,
+        pid: process.pid, startedAt: new Date().toISOString()
+      }), { mode: 384 });
+      try { fs.chmodSync(this.endpointFile, 384); } catch (e) {}
+    } catch (e) {}
+  };
+  AeMcpServer.prototype.clearEndpoint = function () {
+    if (!this.endpointFile) return;
+    try {
+      var cur = JSON.parse(fs.readFileSync(this.endpointFile, "utf8"));
+      if (cur && cur.token === this.token) fs.unlinkSync(this.endpointFile);
+    } catch (e) {}
+  };
+
+  // Per-caller bookkeeping. Only Envato searches have a budget; AE/Premiere calls are uncapped.
+  AeMcpServer.prototype._budget = function (ctx, name, n) {
+    var self = this;
+    // Envato searches never touch AE: own budget so a few searches do not
+    // eat the 10 AE calls a task needs.
+    if (name === "envato_account") return null;
+    if (name === "envato_search") {
+      if (ctx && !ctx.own) return null;
+      if (++self.turnSearch <= MAX_SEARCH) return null;
+      return "LIMIT: sudah " + MAX_SEARCH + " pencarian Envato untuk perintah ini. Tunjukkan kandidat terbaik yang sudah ketemu ke user dan tanya mau yang mana.";
+    }
+    // No call cap (Rijal, 2026-11-10): AE/Premiere calls are never refused.
+    // Counters stay for the panel UI; the 2-min idle reset still re-arms the
+    // per-burst .prproj backup for external sessions.
+    if (!ctx || ctx.own) { ++self.turnCalls; return null; }
+    var now = Date.now();
+    if (now - self.ext.last > 120000) { self.ext.calls = 0; self.ext.backedUp = false; }
+    self.ext.last = now;
+    ++self.ext.calls;
+    return null;
+  };
+
+
   // Called by the panel whenever the user sends a new message.
-  AeMcpServer.prototype.newTurn = function () { this.turnCalls = 0; };
+  AeMcpServer.prototype.newTurn = function () { this.turnCalls = 0; this.turnSearch = 0; };
 
   function lit(s) {
     return JSON.stringify(String(s)).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
@@ -103,7 +158,7 @@
         var t = setTimeout(function () {
           if (done) return;
           done = true;
-          resolve(JSON.stringify({ ok: false, error: "After Effects did not answer in " + ((timeoutMs || 120000) / 1000) + "s (busy rendering or a modal dialog is open)" }));
+          resolve(JSON.stringify({ ok: false, infra: true, error: "After Effects did not answer in " + ((timeoutMs || 120000) / 1000) + "s (busy rendering or a modal dialog is open)" }));
         }, timeoutMs || 120000);
         self.evalHost(expr, function (r) {
           if (done) return;
@@ -119,8 +174,9 @@
   };
 
   function parseHost(raw) {
-    if (!raw) return { ok: false, error: "no reply from After Effects (host script not loaded - reopen the panel)" };
-    try { return JSON.parse(raw); } catch (e) { return { ok: false, error: "bad host reply: " + String(raw).slice(0, 300) }; }
+    if (!raw) return { ok: false, infra: true, error: "no reply from After Effects (host script not loaded - reopen the panel)" };
+    if (raw === "EvalScript error.") return { ok: false, infra: true, error: "After Effects rejected the call (EvalScript error) - host script not loaded; ask the user to reopen the panel" };
+    try { return JSON.parse(raw); } catch (e) { return { ok: false, infra: true, error: "bad host reply: " + String(raw).slice(0, 300) }; }
   }
 
   function waitFile(p, maxMs) {
@@ -169,9 +225,70 @@
               });
             });
           });
+      case "envato_search":
+        if (!global.HBEnvato) return Promise.resolve({ ok: false, infra: true, error: "js/envato.js tidak termuat - reload panel" });
+        return global.HBEnvato.search(a, { previewDir: self.previewDir });
+      case "import_media":
+        return self.importMedia(a);
+      case "envato_account":
+        if (!global.HBEnvatoSession) return Promise.resolve({ ok: false, infra: true, error: "js/envato-session.js tidak termuat - reload panel" });
+        if (a.action === "login") return global.HBEnvatoSession.login({ waitSeconds: 240 });
+        if (a.action === "logout") return global.HBEnvatoSession.logout();
+        return global.HBEnvatoSession.status();
       default:
         return Promise.resolve({ ok: false, error: "unknown tool " + name });
     }
+  };
+
+  // Downloads -> "<project>/Envato Assets" -> AE folder "Envato/<pack>".
+  // Waiting/unzipping happens in node; only the import itself queues on AE.
+  AeMcpServer.prototype.importMedia = function (a) {
+    var self = this, EV = global.HBEnvato, proj = null, dl = null;
+    if (!EV) return Promise.resolve({ ok: false, infra: true, error: "js/envato.js tidak termuat - reload panel" });
+    return self.host("hbProjectDir()").then(parseHost).then(function (pd) {
+      proj = pd && pd.ok ? pd.data : null;
+      var dest = a.dest_dir || (proj && proj.dir ? path.join(proj.dir, "Envato Assets") : self.assetDir);
+      if (!dest) return { ok: false, error: "dest_dir wajib diisi (project belum disimpan)" };
+      // download:true -> Hermes downloads the item in the user's own browser first
+      var lic = a.project_name || (proj && proj.path ? path.basename(proj.path).replace(/\.[a-z0-9]+$/i, "") : "Feugee");
+      return EV.prepareDownload(a, { downloadsDir: self.downloadsDir, timeoutMs: 180000, destRoot: dest, projectName: lic, waitMs: 200000 }).then(function (pre) {
+        if (pre.stop) return pre.stop;
+        dl = pre.info || null;
+        return EV.collect({
+          app: "ae", itemUrl: a.item_url, paths: pre.paths || a.paths, match: a.match, minutes: a.from_downloads_minutes,
+          waitSeconds: pre.waitSeconds, downloadsDir: self.downloadsDir, destRoot: dest, removeSources: pre.removeSources, copy: a.copy,
+          installFonts: a.install_fonts, title: a.title, projectPath: proj && proj.path
+        });
+      });
+    }).then(function (c) {
+      if (!c.ok || !c.plans) { if (dl && dl.note) c.error = dl.note + " " + (c.error || ""); return c; }
+      var packs = [];
+      return c.plans.reduce(function (p, pl) {
+        return p.then(function () {
+          var row = { pack: pl.pack, files: pl.files, location: pl.root };
+          ["templates", "fonts", "luts", "presets", "docs", "models", "skipped", "notes"].forEach(function (k) { if (pl[k] && pl[k].length) row[k] = pl[k]; });
+          packs.push(row);
+          if (!pl.import.length) { row.imported = []; return; }
+          var bin = a.bin || ("Envato/" + pl.pack);
+          var list = "[" + pl.import.map(function (x) { return "[" + lit(x.path) + "," + (x.kind === "sequence" ? "true" : "false") + "]"; }).join(",") + "]";
+          return self.host("hbImportFiles(" + list + "," + lit(bin) + ")", 280000).then(parseHost).then(function (r) {
+            if (!r.ok) { row.error = r.error; return; }
+            row.folder = r.data.folder;
+            row.imported = r.data.imported;
+            if (r.data.reused.length) row.reused = r.data.reused;
+            if (r.data.failed.length) row.failed = r.data.failed;
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        var out = { dest: c.destRoot, sources: c.sources, packs: packs };
+        if (dl) out.download = dl;
+        if (c.errors.length) out.errors = c.errors;
+        if (c.fonts) out.fonts_installed = c.fonts;
+        if (!proj || !proj.dir) out.warning = "Project belum disimpan: aset disalin ke " + c.destRoot + ". Setelah Save As, pakai File > Dependencies > Collect Files kalau mau dipindah ke folder project.";
+        out.hint = "Pakai id dari imported untuk menaruh aset (comp.layers.add(app.project.itemByID(id))). Template: comps berisi comp yang biasanya diedit/dirender.";
+        return { ok: true, data: out };
+      });
+    });
   };
 
   // hbExprErrors returns one row per broken property; 50 layers x 3 props with the
@@ -235,17 +352,21 @@
     });
   }
 
+  // Only infrastructure failures are isError: Hermes opens a per-server circuit
+  // breaker after 3 consecutive isError results (60 s lockout), so a script typo
+  // is returned as normal text the model fixes and retries.
   function textResult(obj) {
-    var isErr = obj && obj.ok === false;
+    var failed = obj && obj.ok === false;
+    var isErr = failed && !!obj.infra;
     var body;
-    if (isErr) body = "ERROR: " + obj.error + (obj.line ? " (line " + obj.line + ")" : "");
+    if (failed) body = (obj.infra ? "ERROR: " : "SCRIPT ERROR (After Effects is fine - fix the code and retry): ") + obj.error + (obj.line ? " (line " + obj.line + ")" : "");
     else if (obj && Object.prototype.hasOwnProperty.call(obj, "result")) {
       body = obj.result === null ? "OK (script returned nothing)" : (typeof obj.result === "string" ? obj.result : JSON.stringify(obj.result));
     } else body = JSON.stringify(obj && obj.data !== undefined ? obj.data : obj);
     return { content: [{ type: "text", text: body }], isError: !!isErr };
   }
 
-  AeMcpServer.prototype._rpc = function (msg) {
+  AeMcpServer.prototype._rpc = function (msg, ctx) {
     var self = this;
     var id = msg.id, method = msg.method, params = msg.params || {};
     function ok(result) { return { jsonrpc: "2.0", id: id, result: result }; }
@@ -261,25 +382,25 @@
       }));
     }
     if (method === "ping") return Promise.resolve(ok({}));
-    if (method === "tools/list") { self.listedAt = Date.now(); return Promise.resolve(ok({ tools: TOOLS })); }
+    if (method === "tools/list") { if (!ctx || ctx.own) self.listedAt = Date.now(); return Promise.resolve(ok({ tools: TOOLS })); }
     if (method === "resources/list") return Promise.resolve(ok({ resources: [] }));
     if (method === "prompts/list") return Promise.resolve(ok({ prompts: [] }));
     if (method === "tools/call") {
       var name = params.name, t0 = Date.now(), n = ++self.calls;
-      if (++self.turnCalls > self.maxTurnCalls) {
-        var msg = "LIMIT: sudah " + self.maxTurnCalls + " panggilan tool AE untuk perintah ini. Semua tool AE diblokir sampai user membalas. " +
-          "BERHENTI sekarang: laporkan apa yang sudah jadi, apa yang belum, dan apa langkah berikutnya, lalu tanya user mau lanjut atau tidak.";
-        self.onDone({ n: n, name: name, ok: false, ms: 0, text: msg, capped: true });
+      var ext = !!(ctx && !ctx.own);
+      var msg = self._budget(ctx, name, n);
+      if (msg) {
+        self.onDone({ n: n, name: name, ok: false, ms: 0, text: msg, capped: true, external: ext });
         return Promise.resolve(ok({ content: [{ type: "text", text: msg }], isError: true }));
       }
-      self.onCall({ n: n, name: name, args: params.arguments || {} });
+      self.onCall({ n: n, name: name, args: params.arguments || {}, external: ext });
       return self.callTool(name, params.arguments).then(function (r) {
         var res = textResult(r);
-        self.onDone({ n: n, name: name, ok: !res.isError, ms: Date.now() - t0, text: res.content[0].text });
+        self.onDone({ n: n, name: name, ok: !(r && r.ok === false), ms: Date.now() - t0, text: res.content[0].text, external: ext });
         return ok(res);
       }, function (e) {
-        self.onDone({ n: n, name: name, ok: false, ms: Date.now() - t0, text: String(e) });
-        return ok(textResult({ ok: false, error: String(e && e.message || e) }));
+        self.onDone({ n: n, name: name, ok: false, ms: Date.now() - t0, text: String(e), external: ext });
+        return ok(textResult({ ok: false, infra: true, error: String(e && e.message || e) }));
       });
     }
     return Promise.resolve(fail(-32601, "method not found: " + method));
@@ -308,7 +429,13 @@
       var requests = batch.filter(function (m) { return m && m.method && m.id !== undefined && m.id !== null; });
       if (!requests.length) { res.writeHead(202); return res.end(); }  // notifications / responses only
 
-      Promise.all(requests.map(function (m) { return self._rpc(m); })).then(function (out) {
+      // Who is calling: the panel's own agent (ACP session server, or the stdio
+      // proxy started by that agent) or another Hermes (Desktop, CLI, Telegram)
+      // through bin/hb-mcp-proxy.js. The proxy sends its parent (hermes) pid.
+      var hdr = req.headers["x-hb-parent-pid"];
+      var mine = String(self.ownPid() || "");
+      var ctx = { own: !hdr || (!!mine && String(hdr).split(",").indexOf(mine) >= 0) };
+      Promise.all(requests.map(function (m) { return self._rpc(m, ctx); })).then(function (out) {
         var headers = { "Content-Type": "application/json" };
         if (requests.some(function (m) { return m.method === "initialize"; })) headers["Mcp-Session-Id"] = self.token.slice(0, 16);
         res.writeHead(200, headers);
@@ -327,12 +454,14 @@
       s.listen(0, "127.0.0.1", function () {
         self.server = s;
         self.port = s.address().port;
+        self.writeEndpoint();
         resolve(self.port);
       });
     });
   };
 
   AeMcpServer.prototype.stop = function () {
+    this.clearEndpoint();
     if (this.server) { try { this.server.close(); } catch (e) {} this.server = null; }
   };
 
@@ -348,4 +477,5 @@
 
   global.AeMcpServer = AeMcpServer;
   global.AeMcpServer.TOOLS = TOOLS;
+  global.AeMcpServer.INSTRUCTIONS = INSTRUCTIONS;
 })(typeof window !== "undefined" ? window : global);

@@ -1062,12 +1062,16 @@
       function (sigRes) {
         log("signature: " + sigRes);
 
+        var hosts = debugHosts(extPath), hostXml = "";
+        for (var hi = 0; hi < hosts.length; hi++) {
+          hostXml += '      <Host Name="' + hosts[hi] + '" Port="' + (debugPort(local.bundleId) + hi) + '"/>\n';
+        }
         var debugXml =
           '<?xml version="1.0" encoding="UTF-8"?>\n' +
           '<ExtensionList>\n' +
           '  <Extension Id="' + local.extensionId + '">\n' +
           '    <HostList>\n' +
-          '      <Host Name="AEFT" Port="' + debugPort(local.bundleId) + '"/>\n' +
+          hostXml +
           '    </HostList>\n' +
           '  </Extension>\n' +
           '</ExtensionList>\n';
@@ -1082,6 +1086,16 @@
           });
         });
       });
+  }
+
+  // Hosts from the panel's own manifest: a Premiere (PPRO) or multi-host
+  // (AEFT + ILST) panel must not get an After-Effects-only .debug.
+  function debugHosts(extPath) {
+    var xml = cepRead(extPath + "/CSXS/manifest.xml") || "", re = /<Host\s+Name="([A-Z]+)"/g, m, out = [], seen = {};
+    while ((m = re.exec(xml)) !== null) {
+      if (!seen[m[1]]) { seen[m[1]] = true; out.push(m[1]); }
+    }
+    return out.length ? out : ["AEFT"];
   }
 
   function debugPort(bundleId) {

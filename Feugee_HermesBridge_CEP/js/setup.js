@@ -95,7 +95,60 @@
     return null;
   }
 
-  function profileDir() { return path.join(HERMES_ROOT, "profiles", PROFILE); }
+  // ---------------------------------------------------------
+  // WHICH PROFILE THE PANEL AGENT RUNS IN
+  //  FULL (default): the user's own Hermes profile - every MCP server,
+  //    connector, skill, memory and provider key they already have. The
+  //    After Effects tools reach it through bin/hb-mcp-proxy.js, registered in
+  //    that profile as mcp_servers.after_effects (so Hermes Desktop, CLI and
+  //    Telegram on the same profile can drive After Effects too).
+  //  CEPAT: the lean `aebridge` profile (vision + panel MCP only): ~5x
+  //    smaller context, nothing else reachable.
+  // Choice is kept in <BASE>/bridge.json; default = Hermes' sticky
+  // active profile (`hermes profile use`), else `default`.
+  // ---------------------------------------------------------
+  var LEAN = PROFILE;
+  var BRIDGE_MCP = "after_effects";
+  var APP_ARG = "ae";
+  var current = null;
+
+  function prefsFile() { return path.join(BASE, "bridge.json"); }
+  function readPrefs() { try { return JSON.parse(fs.readFileSync(prefsFile(), "utf8")) || {}; } catch (e) { return {}; } }
+  function writePrefs(p) {
+    try { fs.mkdirSync(BASE, { recursive: true }); fs.writeFileSync(prefsFile(), JSON.stringify(p, null, 2) + "\n"); } catch (e) {}
+  }
+  function dirOf(name) { return name === "default" ? HERMES_ROOT : path.join(HERMES_ROOT, "profiles", name); }
+  function profileExists(name) { return fs.existsSync(path.join(dirOf(name), "config.yaml")); }
+  function stickyProfile() {
+    try { return fs.readFileSync(path.join(HERMES_ROOT, "active_profile"), "utf8").replace(/^\ufeff/, "").trim() || "default"; }
+    catch (e) { return "default"; }
+  }
+  function isLeanName(n) { return n === "aebridge" || n === "pprbridge"; }
+  function listProfiles() {
+    var out = profileExists("default") ? ["default"] : [];
+    try {
+      fs.readdirSync(path.join(HERMES_ROOT, "profiles")).sort().forEach(function (d) {
+        if (d !== "default" && profileExists(d) && (!isLeanName(d) || d === LEAN)) out.push(d);
+      });
+    } catch (e) {}
+    if (out.indexOf(LEAN) < 0) out.push(LEAN);   // created on first use
+    return out;
+  }
+  function getProfile() {
+    if (current) return current;
+    var p = readPrefs().profile;
+    if (!p || (!isLeanName(p) && !profileExists(p))) p = stickyProfile();
+    if (!isLeanName(p) && !profileExists(p)) p = profileExists("default") ? "default" : LEAN;
+    current = p;
+    return p;
+  }
+  function setProfile(name) {
+    current = name;
+    var p = readPrefs(); p.profile = name; writePrefs(p);
+  }
+  function isLean() { return isLeanName(getProfile()); }
+
+  function profileDir() { return dirOf(getProfile()); }
 
   // ---------------------------------------------------------
   // spawning the CLI
@@ -208,6 +261,7 @@
   var cliOnly = false;
 
   function ensureProfile(bin) {
+    var PROFILE = LEAN;   // only the lean profile is created/pinned by the panel
     var chain = Promise.resolve();
     if (!fs.existsSync(path.join(profileDir(), "config.yaml"))) {
       chain = run(bin, ["profile", "create", PROFILE, "--no-alias", "--no-skills",
@@ -236,6 +290,7 @@
   }
 
   function modelConfigured(bin) {
+    var PROFILE = getProfile();
     if (cliOnly) {
       return run(bin, ["-p", PROFILE, "config", "get", "model.default"], 60000).then(function (r) {
         var v = lastLine(r.out);
@@ -313,12 +368,57 @@
   }
 
   function openLogin(bin) {
+    var PROFILE = getProfile();
     return openInTerminal("login-model", {
       title: "pilih provider & model",
       info: ["Pilih provider (Nous Portal login, Anthropic, OpenAI, OpenRouter, dll)",
              "lalu masukkan akun/API key kamu sendiri. Disimpan di profil " + PROFILE + "."],
       sh: "'" + String(bin).replace(/'/g, "'\\''") + "' -p " + PROFILE + " model",
       ps: "& " + psQuote(bin) + " -p " + PROFILE + " model"
+    });
+  }
+
+  // Node for the stdio proxy: Hermes' bundled node first, then system installs.
+  function findNode() {
+    var c = [];
+    try {
+      fs.readdirSync(path.join(HERMES_ROOT, "tools")).sort().reverse().forEach(function (d) {
+        if (d.indexOf("node-") === 0) c.push(WIN ? path.join(HERMES_ROOT, "tools", d, "node.exe") : path.join(HERMES_ROOT, "tools", d, "bin", "node"));
+      });
+    } catch (e) {}
+    if (!WIN) c.push("/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node");
+    (env("PATH") || "").split(WIN ? ";" : ":").forEach(function (d) {
+      d = d.replace(/^"|"$/g, "").trim();
+      if (d) c.push(path.join(d, WIN ? "node.exe" : "node"));
+    });
+    for (var i = 0; i < c.length; i++) if (isRunnable(c[i])) return c[i];
+    return null;
+  }
+
+  // Register (or repair) mcp_servers.<BRIDGE_MCP> in the FULL-mode profile so
+  // every Hermes session on it gets the After Effects tools. Idempotent: no CLI
+  // call when the entry already points at this extension's proxy.
+  // Resolves {ok, changed, why}.
+  function ensureBridgeMcp(bin, extDir) {
+    var node = findNode();
+    var proxy = path.join(extDir, "bin", "hb-mcp-proxy.js");
+    if (!node) return Promise.resolve({ ok: false, why: "node tidak ditemukan" });
+    if (!fs.existsSync(proxy)) return Promise.resolve({ ok: false, why: "bin/hb-mcp-proxy.js tidak ada di extension" });
+    var cfg = readCfg();
+    var m = cfg.match(new RegExp("^[ \\t]+" + BRIDGE_MCP + ":[ \\t]*\\n((?:[ \\t]{4,}.*(?:\\n|$))*)", "m"));
+    var block = m ? m[1] : "";
+    if (!cliOnly && block && block.indexOf(proxy) >= 0 && block.indexOf(node) >= 0 && !/enabled:\s*false/.test(block)) {
+      return Promise.resolve({ ok: true, changed: false });
+    }
+    var key = "mcp_servers." + BRIDGE_MCP, P = getProfile();
+    // YAML flow list without quotes: survives cmd.exe quoting (spaces in the path are fine).
+    var steps = [[key + ".command", node], [key + ".args", "[" + proxy + ", " + APP_ARG + "]"], [key + ".enabled", "true"]];
+    return steps.reduce(function (p, s) {
+      return p.then(function () { return run(bin, ["-p", P, "config", "set", s[0], s[1]], 60000); });
+    }, Promise.resolve()).then(function () {
+      var again = readCfg();
+      var good = cliOnly || again.indexOf(proxy) >= 0;
+      return { ok: good, changed: true, why: good ? "" : "config set tidak tersimpan" };
     });
   }
 
@@ -331,11 +431,15 @@
     var bin = findHermes();
     if (!bin) return Promise.resolve({ ok: false, step: "install", message: "Hermes Agent belum terpasang di " + (WIN ? "PC" : "Mac") + " ini." });
     syncRules(extDir);
-    return ensureProfile(bin).then(function () {
+    var P = getProfile(), bridge = null;
+    var prep = isLean() ? ensureProfile(bin) : (profileExists(P)
+      ? ensureBridgeMcp(bin, extDir).then(function (r) { bridge = r; })
+      : Promise.reject(new Error("profil Hermes '" + P + "' tidak ada - pilih profil lain di SESSION")));
+    return prep.then(function () {
       return modelConfigured(bin);
     }).then(function (model) {
-      if (!model) return { ok: false, step: "login", bin: bin, message: "Belum ada model. Login ke provider pakai akun atau API key kamu sendiri." };
-      return { ok: true, step: "ready", bin: bin, model: model };
+      if (!model) return { ok: false, step: "login", bin: bin, message: "Belum ada model di profil " + P + ". Login ke provider pakai akun atau API key kamu sendiri." };
+      return { ok: true, step: "ready", bin: bin, model: model, profile: P, lean: isLean(), bridge: bridge };
     }, function (e) {
       return { ok: false, step: "profile", bin: bin, message: String(e.message || e) };
     });
@@ -361,7 +465,15 @@
     PLATFORM: PLAT,
     IS_WIN: WIN,
     MOD: WIN ? "Ctrl" : "Cmd",
-    PROFILE: PROFILE,
+    PROFILE: PROFILE,          // lean profile name (kept for older callers)
+    LEAN_PROFILE: LEAN,
+    BRIDGE_MCP: BRIDGE_MCP,
+    getProfile: getProfile,
+    setProfile: setProfile,
+    listProfiles: listProfiles,
+    isLean: isLean,
+    findNode: findNode,
+    ensureBridgeMcp: ensureBridgeMcp,
     HOME: HOME,
     HERMES_ROOT: HERMES_ROOT,
     BASE: BASE,

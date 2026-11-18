@@ -74,6 +74,28 @@
   });
 
   // ---------------------------------------------------------
+  // PROFILE: full = the user's own Hermes profile (every MCP server,
+  // connector, skill, memory), cepat = the lean bridge profile.
+  // ---------------------------------------------------------
+  var profSel = $("profileSel");
+  function paintProfiles() {
+    if (!profSel) return;
+    var cur = S.getProfile();
+    profSel.innerHTML = S.listProfiles().map(function (n) {
+      var lean = n === S.LEAN_PROFILE;
+      return '<option value="' + esc(n) + '"' + (n === cur ? " selected" : "") + ">" +
+        esc(n + (lean ? " - cepat, AE saja" : " - full")) + "</option>";
+    }).join("");
+  }
+  if (profSel) profSel.addEventListener("change", function () {
+    var v = profSel.value;
+    if (st.busy || st.booting) { note("tunggu Hermes selesai dulu sebelum ganti profil", true); paintProfiles(); return; }
+    S.setProfile(v);
+    note("profil Hermes -> " + v + (S.isLean() ? " (cepat: tool AE saja)" : " (full: semua MCP, connector, skill, memory)"));
+    restart();
+  });
+
+  // ---------------------------------------------------------
   // MODEL STATE
   // ---------------------------------------------------------
   var store = new M.Store();
@@ -128,7 +150,10 @@
   function inline(s) {
     return esc(s)
       .replace(/`([^`\n]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+      .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+      // [label](https://...) and bare https URLs open in the default browser
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="hb-link" data-open="$2" title="$2">$1</a>')
+      .replace(/(^|[\s(])(https?:\/\/[^\s<)]*[^\s<).,;:!?'"])/g, '$1<a class="hb-link" data-open="$2" title="$2">$2</a>');
   }
 
   var RUNNABLE = { jsx: 1, extendscript: 1, aescript: 1 };
@@ -211,11 +236,12 @@
     down(true);
   }
 
-  function toolRow(host, id, title, ae) {
+  // tag: "AE" / "ENV" for panel tools (timed + counted), null for other Hermes tools
+  function toolRow(host, id, title, tag) {
     var d = document.createElement("div");
-    d.className = "hb-tool" + (ae ? " ae" : "");
+    d.className = "hb-tool" + (tag ? " ae" : "") + (tag === "ENV" ? " env" : "");
     if (id) d.setAttribute("data-tc", id);
-    d.innerHTML = "<i></i>" + (ae ? "<b>AE</b> " : "") + esc(title);
+    d.innerHTML = "<i></i>" + (tag ? "<b>" + tag + "</b> " : "") + esc(title);
     d.title = title;
     host.appendChild(d);
     down();
@@ -230,16 +256,34 @@
     return st.turn;
   }
 
+  // Streaming re-renders the whole reply as markdown; doing it every frame
+  // starved the composer (typing lag) on long replies. Cap at ~8 renders/s.
+  var PAINT_MS = 120;
   function paint() {
     var t = st.turn;
     if (!t || t.queued) return;
     t.queued = true;
-    requestAnimationFrame(function () {
-      t.queued = false;
-      if (st.turn !== t) return;
-      t.b.body.innerHTML = renderMd(t.text, true) + '<span class="hb-caret"></span>';
-      down();
-    });
+    setTimeout(function () {
+      requestAnimationFrame(function () {
+        t.queued = false;
+        if (st.turn !== t) return;
+        t.b.body.innerHTML = renderMd(t.text, true) + '<span class="hb-caret"></span>';
+        down();
+      });
+    }, PAINT_MS);
+  }
+
+  // LOG drawer: Hermes writes many stderr lines per turn; rewriting a 30 KB
+  // text node per line forced a relayout each time. One write per 250 ms.
+  var logQ = [], logT = 0;
+  function queueLog(l) {
+    logQ.push(l);
+    if (logT) return;
+    logT = setTimeout(function () {
+      logT = 0;
+      var lines = logQ; logQ = [];
+      if (isOn(modeLog)) drawer.textContent = (drawer.textContent + "\n" + lines.join("\n")).slice(-30000);
+    }, 250);
   }
 
   function endTurn() {
@@ -255,7 +299,7 @@
   // ACP (backend)
   // ---------------------------------------------------------
   var acp = new window.Acp({
-    onLog: function (l) { if (isOn(modeLog)) drawer.textContent = (drawer.textContent + "\n" + l).slice(-30000); },
+    onLog: function (l) { if (isOn(modeLog)) queueLog(l); },
     onError: function (m) { note(m, true); },
     onExit: function (i) {
       var wasReady = st.ready;
@@ -273,10 +317,14 @@
     onTool: function (x) {
       var t = ensureTurn();
       if (t.tools[x.toolCallId]) return;
-      var ae = /mcp__ae__|^ae[_:]/.test(x.title);
-      var label = x.title.replace(/^mcp__ae__/, "").replace(/_/g, " ");
-      t.tools[x.toolCallId] = toolRow(t.b.tools, x.toolCallId, ae ? label : x.title, ae);
-      setStatus((ae ? "AE: " + label : x.title).slice(0, 80), "busy", "var(--blue)");
+      // lean profile: mcp__ae__<tool>; full profile: mcp_after_effects_<tool>
+      // (direct, or inside a tool_call bridge title)
+      var hit = x.title.match(/mcp_+(?:ae|after_effects)_+([a-z_]+)/) || x.title.match(/^(?:ae)[_:]([a-z_]+)/);
+      var ae = !!hit;
+      var env = ae && /^(envato_search|import_media|envato_account)$/.test(hit[1]);
+      var label = hit ? hit[1].replace(/_/g, " ") : x.title;
+      t.tools[x.toolCallId] = toolRow(t.b.tools, x.toolCallId, ae ? label : x.title, ae ? (env ? "ENV" : "AE") : null);
+      setStatus((ae ? (env ? "Envato: " : "AE: ") + label : x.title).slice(0, 80), "busy", "var(--blue)");
     },
     onToolUpdate: function (x) {
       var t = st.turn;
@@ -423,7 +471,7 @@
     window.HBSetup.check(EXT_DIR).then(function (s) {
       if (!s.ok) { st.booting = false; showSetup(s); return; }
       hideSetup();
-      startAgent();
+      startAgent(s);
     });
   }
 
@@ -462,17 +510,42 @@
   });
   $("setupRecheck").addEventListener("click", function () { boot(); });
 
-  function startAgent() {
+  // FULL profile: tools come through bin/hb-mcp-proxy.js (registered in that
+  // profile), which reports its tools/list to us asynchronously - give it a moment.
+  function waitListed(ms) {
+    var t0 = Date.now();
+    return new Promise(function (resolve) {
+      (function tick() {
+        if (aeMcp.listedAt || Date.now() - t0 > ms) return resolve(!!aeMcp.listedAt);
+        setTimeout(tick, 150);
+      })();
+    });
+  }
+
+  function profileTag() { return S.getProfile() + (S.isLean() ? " (cepat)" : " (full)"); }
+
+  function startAgent(setup) {
     paintChip();
+    if (setup && setup.bridge) {
+      if (setup.bridge.ok && setup.bridge.changed) {
+        note("Tool After Effects dipasang di profil " + S.getProfile() + " (mcp_servers." + S.BRIDGE_MCP + "). Hermes Desktop, CLI, dan Telegram di profil itu juga bisa pegang After Effects mulai sesi baru, selama panel ini terbuka.");
+      } else if (!setup.bridge.ok) {
+        note("Gagal memasang tool After Effects di profil " + S.getProfile() + ": " + setup.bridge.why, true);
+      }
+    }
     metaChat.textContent = "Menyalakan Hermes...";
     setStatus("Menyalakan Hermes (" + modelLabel(wanted) + ")...", "busy");
     var t0 = Date.now();
     aeMcp.start().then(function () {
-      acp.mcpServers = [aeMcp.acpEntry()];
+      // lean: hand the server to this session directly. full: the profile's
+      // configured proxy reaches the same server (no duplicate tools).
+      acp.mcpServers = S.isLean() ? [aeMcp.acpEntry()] : [];
+      aeMcp.listedAt = 0;
       if (!acp.alive()) acp.spawn();
       return acp.initialize();
     }).then(function () { return acp.newSession(); })
     .then(afterSession)
+    .then(function () { return S.isLean() ? null : waitListed(5000); })
     .then(function () {
       st.booting = false; st.ready = true;
       store.pushRecent(acp.currentModel);
@@ -482,7 +555,7 @@
         setStatus("Hermes siap, tapi tool AE belum terpasang - klik RESTART", "err");
         note("Hermes tidak mengambil daftar tool AE (MCP). Tanpa itu dia tidak bisa menyentuh AE. Klik RESTART; kalau tetap, buka LOG.", true);
       } else {
-        setStatus("Hermes siap - " + modelLabel() + " - " + window.AeMcpServer.TOOLS.length + " tool AE", "ok");
+        setStatus("Hermes siap - " + modelLabel() + " - " + profileTag() + " - " + window.AeMcpServer.TOOLS.length + " tool AE", "ok");
       }
       input.focus();
     }).catch(function (e) {
@@ -642,10 +715,22 @@
   var aeMcp = new window.AeMcpServer({
     evalHost: evalHost,
     frameDir: FRAMES,
+    endpointFile: path.join(BASE, "endpoint.json"),
+    ownPid: function () { return acp.child && acp.child.pid; },
     onCall: function (c) {
-      if (c.name === "run_script") setStatus("AE: menjalankan script...", "busy", "var(--blue)");
+      if (c.external) { setStatus("Hermes di luar panel -> AE: " + String(c.name).replace(/_/g, " "), "busy", "var(--blue)"); return; }
+      if (c.name === "envato_search") setStatus(("Envato: cari " + (c.args.item_type || "") + ' "' + (c.args.query || "") + '"...').slice(0, 90), "busy", "var(--blue)");
+      else if (c.name === "import_media") setStatus(c.args.download ? "Envato: download otomatis di browser (tab background) lalu import..." : c.args.wait_seconds ? "Menunggu download Envato selesai - klik DOWNLOAD di browser..." : "Import media ke After Effects...", "busy", "var(--orange)");
+      else if (c.name === "run_script") setStatus("AE: menjalankan script...", "busy", "var(--blue)");
     },
     onDone: function (c) {
+      if (c.external) {
+        // Hermes Desktop / CLI / Telegram on the full profile used this app
+        note("Hermes (di luar panel): AE: " + String(c.name).replace(/_/g, " ") + " - " + (c.capped ? "dibatasi" : c.ok ? "ok" : "error") + " (" + (c.ms < 1000 ? c.ms + "ms" : (c.ms / 1000).toFixed(1) + "s") + ")", !c.ok);
+        setStatus("Hermes di luar panel selesai pakai AE", c.ok ? "ok" : "err");
+        if (c.name === "run_script") refreshMeta();
+        return;
+      }
       var t = st.turn;
       if (!t) return;
       // attach timing to the matching (last unfinished) AE row
@@ -663,8 +748,47 @@
         row.appendChild(s);
         if (!c.ok) row.title = c.text;
       }
+      if (c.name === "envato_search" && c.ok) envatoCards(t, c.text);
+      if (c.name === "import_media" && c.ok) refreshMeta();
     }
   });
+
+  // ---------------------------------------------------------
+  // ENVATO RESULT CARDS (from envato_search, own agent)
+  // Click = item page in the default browser, where the user downloads it
+  // (licence per project). import_media then picks the file up.
+  // ---------------------------------------------------------
+  function openUrl(u) {
+    u = String(u || "");
+    if (!/^https?:\/\//i.test(u)) return;
+    try {
+      if (window.cep && window.cep.util && typeof window.cep.util.openURLInDefaultBrowser === "function") { window.cep.util.openURLInDefaultBrowser(u); return; }
+    } catch (e) {}
+    try {
+      var cpm = require("child_process");
+      // rundll32 keeps "&" in the URL intact (cmd /c start would split it)
+      if (S.IS_WIN) cpm.spawn("rundll32.exe", ["url.dll,FileProtocolHandler", u], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+      else cpm.spawn("open", [u], { detached: true, stdio: "ignore" }).unref();
+    } catch (e2) { note("gagal membuka " + u, true); }
+  }
+
+  function envatoCards(t, text) {
+    var d = null;
+    try { d = JSON.parse(text); } catch (e) { return; }
+    if (!d || !d.items || !d.items.length) return;
+    var g = document.createElement("div");
+    g.className = "hb-env";
+    g.innerHTML = '<div class="hb-env-h"><b>ENVATO</b> ' + esc(String(d.item_type || "").replace(/-/g, " ")) + ' "' + esc(d.query || "") + '"' +
+      ' <span>' + d.items.length + (d.has_next ? "+" : "") + " hasil - klik untuk download</span>" + "</div>" +
+      '<div class="hb-env-g">' + d.items.map(function (it) {
+        var img = it.preview ? fileUrl(it.preview) : (/^https:\/\//.test(it.cover || "") ? it.cover : "");
+        return '<button class="hb-env-c" data-open="' + esc(it.url || "") + '" title="' + esc((it.title || "") + " - " + (it.author || "") + "\nBuka di Envato untuk download") + '">' +
+          (img ? '<img src="' + esc(img) + '" alt="">' : '<em>' + esc(String(d.item_type || "").replace(/-/g, " ")) + "</em>") +
+          '<span class="n">' + esc(it.n) + '</span><span class="t">' + esc(it.title || "") + '</span><span class="a">' + esc(it.author || "") + "</span></button>";
+      }).join("") + "</div>";
+    t.b.tools.appendChild(g);
+    down();
+  }
 
   function runInAE(code, cb) {
     evalHost("hbEval(" + JSON.stringify(String(code)) + ", \"Hermes Bridge\")", function (raw) {
@@ -815,8 +939,17 @@
   // ---------------------------------------------------------
   // COMP META (cheap read-only poll)
   // ---------------------------------------------------------
-  function refreshMeta() {
+  // poll=true (timer) yields while Rijal types or the agent works: every
+  // evalScript runs on the host's main thread, the same one delivering keys.
+  var lastKey = 0;
+  // Poll only while the cursor is over the panel: an idle evalScript every 2 s
+  // competes with AE/Premiere's main thread for nothing. One refresh on enter.
+  var panelHovered = false;
+  document.documentElement.addEventListener("mouseenter", function () { panelHovered = true; refreshMeta(false); });
+  document.documentElement.addEventListener("mouseleave", function () { panelHovered = false; });
+  function refreshMeta(poll) {
     if (document.hidden) return;
+    if (poll && (!panelHovered || st.busy || Date.now() - lastKey < 2500)) return;
     evalHost("hbCompMeta()", function (r) { if (r) metaComp.textContent = r; });
   }
 
@@ -824,8 +957,10 @@
   // EVENTS
   // ---------------------------------------------------------
   document.addEventListener("click", function (ev) {
-    var t = ev.target && ev.target.closest ? ev.target.closest("[data-run], [data-model], [data-retry], [data-pick], .tile[data-act]") : null;
+    var t = ev.target && ev.target.closest ? ev.target.closest("[data-open], [data-run], [data-model], [data-retry], [data-pick], .tile[data-act]") : null;
     if (!t) return;
+
+    if (t.hasAttribute("data-open")) { ev.preventDefault(); openUrl(t.getAttribute("data-open")); return; }
 
     if (t.hasAttribute("data-model")) { switchModel(t.getAttribute("data-model")); return; }
     if (t.hasAttribute("data-pick")) { openPicker(); return; }
@@ -884,9 +1019,19 @@
     send(v);
   });
 
-  function autosize() { input.style.height = "auto"; input.style.height = Math.min(160, Math.max(46, input.scrollHeight)) + "px"; }
-  input.addEventListener("input", autosize);
+  // One measure per frame at most (height:auto + scrollHeight forces a layout).
+  var sizeQ = 0;
+  function autosize() {
+    if (sizeQ) return;
+    sizeQ = requestAnimationFrame(function () {
+      sizeQ = 0;
+      input.style.height = "auto";
+      input.style.height = Math.min(160, Math.max(46, input.scrollHeight)) + "px";
+    });
+  }
+  input.addEventListener("input", function () { lastKey = Date.now(); autosize(); });
   input.addEventListener("keydown", function (e) {
+    lastKey = Date.now();
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       if (st.busy) return;
@@ -920,10 +1065,11 @@
   try { fs.mkdirSync(FRAMES, { recursive: true }); fs.mkdirSync(ATTACH, { recursive: true }); } catch (e) {}
   paintAttachments();
   cleanFrames();
-  setInterval(refreshMeta, 1500);
+  setInterval(function () { refreshMeta(true); }, 2000);
   refreshMeta();
   paintChip();
+  paintProfiles();
   try { $("hintKeys").textContent = "Enter kirim - Esc stop - " + MOD + "+K model"; } catch (e) {}
-  note("Hermes Bridge 2.2 - Hermes pegang AE lewat tool MCP (get comp/layer, run script, render frame). Tiap script = 1 undo group. Ganti model: chip, " + MOD + "+K, atau /model.");
+  note("Hermes Bridge 2.5 - profil " + S.getProfile() + (S.isLean() ? " (cepat: tool AE saja)" : " (full: semua MCP, connector, skill, memory kamu + tool AE)") + ". Tiap script = 1 undo group. Ganti model: chip, " + MOD + "+K, atau /model. Ganti profil: SESSION. Envato: \"cariin musik upbeat di Envato\" -> bilang mau yang mana, Hermes download (browser kamu yang sudah login Envato) + import otomatis.");
   boot();
 })();

@@ -1,0 +1,15 @@
+/* Plugin-only styles, scoped under .hbf. panel.css stays canonical. */
+.hbf { display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+.hbf .content { flex: 1 1 auto; overflow-y: auto; }
+.hbf-spacer { flex: 1 1 auto; }
+.hbf-kv { display: grid; grid-template-columns: 54px 1fr; gap: 4px 10px; margin: 8px 0 6px; font-size: 11px; }
+.hbf-kv dt { color: var(--text-dim); }
+.hbf-kv dd { margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbf-log { list-style: none; margin: 8px 0 0; padding: 0; max-height: 210px; overflow-y: auto; font-size: 10.5px; }
+.hbf-log li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 5px 0; border-top: 1px solid var(--stroke-soft); }
+.hbf-log li:first-child { border-top: 0; }
+.hbf-log b { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbf-log i { font-style: normal; color: var(--text-dim); }
+.hbf-log span { grid-column: 1 / -1; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbf-log li.err b { color: var(--danger); }
+.hbf-empty { color: var(--text-dim); }

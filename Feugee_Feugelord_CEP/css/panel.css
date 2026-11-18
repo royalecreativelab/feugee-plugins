@@ -1255,4 +1255,16 @@ body[data-theme="light"] {
   }
 }
 
-
+/* ---------------------------------------------------------
+   OFFSCREEN RENDERING: pause infinite idle animations while the
+   cursor is outside the panel so CEPHtmlEngine does not repaint at
+   60fps and compete with the host app's main thread.
+   --------------------------------------------------------- */
+body:not(:hover) .brand-logo:not(.logo-pop),
+body:not(:hover) .brand-logo .fg-l2,
+body:not(:hover) .brand-logo .fg-l4,
+body:not(:hover) .feugee-ticker-track,
+body:not(:hover) .pixel-text,
+body:not(:hover) .pixel-icon {
+  animation: none !important;
+}

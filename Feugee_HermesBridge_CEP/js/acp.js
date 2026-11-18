@@ -20,7 +20,9 @@
     var env = S.agentEnv(S.toolDirs(bin));
     // Figma / Google Workspace MCP are not needed inside AE: skipping them
     // saves seconds at boot and ~170 tool schemas on every turn.
-    if (!opts || !opts.withMcp) env.HERMES_ACP_SKIP_CONFIGURED_MCP = "1";
+    // FULL mode (user's own profile) needs its configured MCP servers: that is
+    // where Figma, Google Workspace, connectors and the AE proxy live.
+    if (S.isLean() && (!opts || !opts.withMcp)) env.HERMES_ACP_SKIP_CONFIGURED_MCP = "1";
     // Panel MCP tools (mcp__ae__*) must be sent eagerly, not hidden behind
     // tool_search: that bridge costs an extra model round trip per call.
     return env;

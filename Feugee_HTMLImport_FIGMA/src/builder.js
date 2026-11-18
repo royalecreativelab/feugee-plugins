@@ -1,0 +1,497 @@
+/* =========================================================
+   FEUGEE HTML IMPORT - builder.js
+   Turns the capture IR into native Figma nodes.
+   Runs in the plugin sandbox (also runnable through use_figma for tests),
+   so: no DOM, no figma.notify, progress goes through opts.onProgress.
+   ========================================================= */
+var FeugeeBuild = (function () {
+  "use strict";
+
+  var GENERIC = {
+    "sans-serif": ["Inter", "Helvetica Neue", "Arial", "Roboto"],
+    "system-ui": ["SF Pro Text", "SF Pro", "Inter"],
+    "-apple-system": ["SF Pro Text", "SF Pro", "Inter"],
+    "blinkmacsystemfont": ["SF Pro Text", "SF Pro", "Inter"],
+    "ui-sans-serif": ["Inter", "SF Pro Text", "Helvetica Neue"],
+    "segoe ui": ["Segoe UI", "Inter"],
+    "serif": ["Times New Roman", "Georgia", "Noto Serif", "Source Serif Pro"],
+    "ui-serif": ["New York", "Georgia", "Times New Roman"],
+    "monospace": ["SF Mono", "Menlo", "Roboto Mono", "Source Code Pro", "JetBrains Mono"],
+    "ui-monospace": ["SF Mono", "Menlo", "Roboto Mono"],
+    "sfmono-regular": ["SF Mono", "Menlo", "Roboto Mono"],
+    "cursive": ["Comic Sans MS", "Caveat"],
+    "fantasy": ["Impact", "Bebas Neue"],
+    "apple color emoji": [], "segoe ui emoji": [], "segoe ui symbol": [], "noto color emoji": []
+  };
+  var FALLBACK = { family: "Inter", style: "Regular" };
+
+  var _fontIndex = null;
+
+  function styleInfo(style) {
+    var s = style.toLowerCase().replace(/[\s_-]+/g, "");
+    var it = /italic|oblique/.test(s);
+    var w = 400;
+    if (/thin|hairline/.test(s)) w = 100;
+    else if (/extralight|ultralight/.test(s)) w = 200;
+    else if (/light/.test(s)) w = 300;
+    else if (/medium/.test(s)) w = 500;
+    else if (/semibold|demibold/.test(s)) w = 600;
+    else if (/extrabold|ultrabold/.test(s)) w = 800;
+    else if (/black|heavy/.test(s)) w = 900;
+    else if (/bold/.test(s)) w = 700;
+    var odd = /condensed|narrow|compressed|expanded|extended|wide|display|text|caption|small|mono/.test(s.replace(/italic|oblique/, "")) ? 1 : 0;
+    return { w: w, it: it, odd: odd };
+  }
+
+  function famKey(f) { return String(f).toLowerCase().replace(/[\s'"_-]+/g, ""); }
+
+  async function fontIndex() {
+    if (_fontIndex) return _fontIndex;
+    var list = await figma.listAvailableFontsAsync();
+    var idx = {};
+    for (var i = 0; i < list.length; i++) {
+      var fn = list[i].fontName, k = famKey(fn.family);
+      (idx[k] = idx[k] || { family: fn.family, styles: [] }).styles.push(fn.style);
+    }
+    _fontIndex = idx;
+    return idx;
+  }
+
+  function pickStyle(entry, wt, it) {
+    var best = null, bestScore = Infinity;
+    entry.styles.forEach(function (st) {
+      var inf = styleInfo(st);
+      var score = Math.abs(inf.w - wt) + (inf.it !== it ? 1000 : 0) + inf.odd * 60;
+      if (score < bestScore) { bestScore = score; best = st; }
+    });
+    return { family: entry.family, style: best };
+  }
+
+  function resolveFont(idx, fams, wt, it, report) {
+    var tried = [];
+    for (var i = 0; i < fams.length; i++) {
+      var f = fams[i];
+      var k = famKey(f);
+      var cands = GENERIC.hasOwnProperty(f.toLowerCase()) ? GENERIC[f.toLowerCase()] : [f];
+      if (!GENERIC.hasOwnProperty(f.toLowerCase())) {
+        cands = [f, f.replace(/\s*(var|variable|vf)$/i, ""), f.replace(/\s*(display|text)$/i, "")];
+      }
+      for (var j = 0; j < cands.length; j++) {
+        var e = idx[famKey(cands[j])];
+        if (e) {
+          if (tried.length && report) report[tried[0]] = e.family;
+          return pickStyle(e, wt, it);
+        }
+      }
+      if (!GENERIC.hasOwnProperty(f.toLowerCase()) && k) tried.push(f);
+    }
+    var fb = idx[famKey("Inter")] ? pickStyle(idx[famKey("Inter")], wt, it) : FALLBACK;
+    if (tried.length && report) report[tried[0]] = fb.family;
+    return fb;
+  }
+
+  // ---------------------------------------------------------
+  // paints / effects
+  // ---------------------------------------------------------
+  function rgb(c) { return { r: clamp01(c.r), g: clamp01(c.g), b: clamp01(c.b) }; }
+  function rgba(c) { return { r: clamp01(c.r), g: clamp01(c.g), b: clamp01(c.b), a: clamp01(c.a) }; }
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+  function linearTransform(angleDeg, w, h) {
+    var t = angleDeg * Math.PI / 180, s = Math.sin(t), c = Math.cos(t);
+    w = w || 1; h = h || 1;
+    var L = Math.abs(w * s) + Math.abs(h * c) || 1;
+    // maps node-normalised (u,v) to gradient space; gradient runs (0,.5)->(1,.5)
+    return [
+      [w * s / L, -h * c / L, 0.5 - (w * s - h * c) / (2 * L)],
+      [w * c / L, h * s / L, 0.5 - (w * c + h * s) / (2 * L)]
+    ];
+  }
+
+  function radialTransform(p, w, h) {
+    w = w || 1; h = h || 1;
+    var cx = p.cx, cy = p.cy, rx, ry;
+    var fx = Math.max(cx, 1 - cx), fy = Math.max(cy, 1 - cy);
+    if (p.circle) {
+      var rpx = Math.sqrt(fx * w * fx * w + fy * h * fy * h);
+      rx = rpx / w; ry = rpx / h;
+    } else { rx = fx * Math.SQRT2; ry = fy * Math.SQRT2; }
+    return [[1 / (2 * rx), 0, 0.5 - cx / (2 * rx)], [0, 1 / (2 * ry), 0.5 - cy / (2 * ry)]];
+  }
+
+  function paint(p, w, h, hashes) {
+    if (p.k === "solid") {
+      if (!p.c || p.c.a <= 0) return null;
+      return { type: "SOLID", color: rgb(p.c), opacity: clamp01(p.c.a) };
+    }
+    if (p.k === "lin" || p.k === "rad") {
+      return {
+        type: p.k === "lin" ? "GRADIENT_LINEAR" : "GRADIENT_RADIAL",
+        gradientTransform: p.k === "lin" ? linearTransform(p.angle, w, h) : radialTransform(p, w, h),
+        gradientStops: p.stops.map(function (s) { return { color: rgba(s.c), position: clamp01(s.p) }; })
+      };
+    }
+    if (p.k === "img") {
+      var hsh = hashes[p.key];
+      if (!hsh) return null;
+      var out = { type: "IMAGE", imageHash: hsh, scaleMode: p.fit || "FILL" };
+      if (p.fit === "TILE") out.scalingFactor = 1;
+      return out;
+    }
+    return null;
+  }
+
+  function effects(n) {
+    var fx = [];
+    (n.fx || []).forEach(function (s) {
+      fx.push({
+        type: s.k === "inner" ? "INNER_SHADOW" : "DROP_SHADOW",
+        color: rgba(s.c), offset: { x: s.x, y: s.y }, radius: Math.max(0, s.b), spread: s.s || 0,
+        visible: true, blendMode: "NORMAL"
+      });
+    });
+    if (n.blur) fx.push({ type: "LAYER_BLUR", blurType: "NORMAL", radius: n.blur * 2, visible: true });
+    if (n.bblur) fx.push({ type: "BACKGROUND_BLUR", blurType: "NORMAL", radius: n.bblur * 2, visible: true });
+    return fx;
+  }
+
+  function setEffects(node, fx) {
+    if (!fx.length) return;
+    try { node.effects = fx; }
+    catch (e) {
+      // older runtimes reject blurType / spread on some nodes
+      try {
+        node.effects = fx.map(function (f) {
+          var g = {}; for (var k in f) if (k !== "blurType" && k !== "spread") g[k] = f[k];
+          return g;
+        });
+      } catch (e2) {}
+    }
+  }
+
+  function applyBox(node, n, hashes, st) {
+    var fills = [];
+    (n.fills || []).forEach(function (p) {
+      var fp = paint(p, n.w, n.h, hashes);
+      if (fp) fills.push(fp);
+      else if (p.k === "img") {
+        st.missingImages++;
+        fills.push({ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } });
+      }
+    });
+    node.fills = fills;
+    if (n.border) {
+      node.strokes = [{ type: "SOLID", color: rgb(n.border.c), opacity: clamp01(n.border.c.a) }];
+      node.strokeAlign = "INSIDE";
+      var w = n.border.w;
+      if (w[0] === w[1] && w[1] === w[2] && w[2] === w[3]) node.strokeWeight = w[0];
+      else {
+        node.strokeTopWeight = w[0]; node.strokeRightWeight = w[1];
+        node.strokeBottomWeight = w[2]; node.strokeLeftWeight = w[3];
+      }
+      var bw = Math.max.apply(null, w);
+      if (n.border.style === "dashed") node.dashPattern = [bw * 3, bw * 3];
+      else if (n.border.style === "dotted") { node.dashPattern = [bw, bw]; node.strokeCap = "ROUND"; }
+    }
+    if (n.rad) {
+      var r = n.rad;
+      if (r[0] === r[1] && r[1] === r[2] && r[2] === r[3]) node.cornerRadius = r[0];
+      else { node.topLeftRadius = r[0]; node.topRightRadius = r[1]; node.bottomRightRadius = r[2]; node.bottomLeftRadius = r[3]; }
+    }
+    setEffects(node, effects(n));
+    if (n.op != null) node.opacity = n.op;
+    if (n.blend) { try { node.blendMode = n.blend; } catch (e) {} }
+  }
+
+  // ---------------------------------------------------------
+  // geometry
+  // ---------------------------------------------------------
+  function place(node, n, rx, ry, leaf) {
+    if (!n.tf) { node.x = rx; node.y = ry; return; }
+    var m = n.tf, a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5];
+    var sx = Math.sqrt(a * a + b * b) || 1;
+    var det = a * d - b * c;
+    var sy = det / sx || 1;
+    var ox = n.to ? n.to[0] : n.w / 2, oy = n.to ? n.to[1] : n.h / 2;
+    var ra = a / sx, rb = b / sx, rc = -rb, rd = ra; // pure rotation
+    if (leaf && (Math.abs(sx - 1) > 0.01 || Math.abs(sy - 1) > 0.01) && "resize" in node) {
+      try { node.resize(Math.max(0.01, n.w * sx), Math.max(0.01, n.h * Math.abs(sy))); } catch (er) {}
+      // scaling around the origin moves the top-left corner
+      rx += ox - ox * sx; ry += oy - oy * Math.abs(sy);
+      ox *= sx; oy *= Math.abs(sy);
+    }
+    if (Math.abs(rb) < 1e-4) {
+      node.x = rx + e + (ox - ra * ox); node.y = ry + f + (oy - rd * oy);
+      return;
+    }
+    var tx = rx + ox + e - ra * ox - rc * oy;
+    var ty = ry + oy + f - rb * ox - rd * oy;
+    try { node.relativeTransform = [[ra, rc, tx], [rb, rd, ty]]; }
+    catch (er2) { node.x = rx + e; node.y = ry + f; }
+  }
+
+  function resizeSafe(node, w, h) {
+    try { node.resize(Math.max(0.01, w), Math.max(0.01, h)); } catch (e) {}
+  }
+
+  // ---------------------------------------------------------
+  // build
+  // ---------------------------------------------------------
+  function count(n) {
+    var c = 1;
+    if (n.kids) for (var i = 0; i < n.kids.length; i++) c += count(n.kids[i]);
+    return c;
+  }
+
+  function collectFonts(n, out) {
+    if (n.segs) n.segs.forEach(function (s) {
+      var k = s.fam.join(",") + "|" + s.wt + "|" + (s.it ? 1 : 0);
+      if (!out[k]) out[k] = { fam: s.fam, wt: s.wt, it: !!s.it };
+    });
+    if (n.kids) n.kids.forEach(function (k) { collectFonts(k, out); });
+  }
+
+  /**
+   * doc    : capture result (title, w, h, bg, root)
+   * assets : { key: { bytes?: Uint8Array, svg?: string } }
+   * opts   : { onProgress(done,total,label), x, y, parent }
+   */
+  async function build(doc, assets, opts) {
+    opts = opts || {};
+    var st = {
+      nodes: 0, frames: 0, texts: 0, images: 0, vectors: 0, autolayout: 0,
+      missingImages: 0, svgFailed: 0, fontsLoaded: 0, substitutions: {}, warnings: []
+    };
+    var progress = opts.onProgress || function () {};
+    var total = count(doc.root);
+
+    // ---- fonts ----
+    progress(0, total, "Loading fonts");
+    var idx = await fontIndex();
+    var wanted = {}; collectFonts(doc.root, wanted);
+    var resolved = {}, toLoad = {};
+    Object.keys(wanted).forEach(function (k) {
+      var w = wanted[k];
+      var fn = resolveFont(idx, w.fam, w.wt, w.it, st.substitutions);
+      resolved[k] = fn;
+      toLoad[fn.family + "\u0000" + fn.style] = fn;
+    });
+    toLoad["Inter\u0000Regular"] = FALLBACK;
+    var loadList = Object.keys(toLoad).map(function (k) { return toLoad[k]; });
+    var failedFonts = {};
+    await Promise.all(loadList.map(function (fn) {
+      return figma.loadFontAsync(fn).then(function () { st.fontsLoaded++; }, function () { failedFonts[fn.family + "\u0000" + fn.style] = 1; });
+    }));
+    function fontFor(s) {
+      var fn = resolved[s.fam.join(",") + "|" + s.wt + "|" + (s.it ? 1 : 0)] || FALLBACK;
+      return failedFonts[fn.family + "\u0000" + fn.style] ? FALLBACK : fn;
+    }
+
+    // ---- images ----
+    progress(0, total, "Uploading images");
+    var hashes = {};
+    Object.keys(assets || {}).forEach(function (k) {
+      var a = assets[k];
+      if (a && a.bytes && a.bytes.length) {
+        try { hashes[k] = figma.createImage(a.bytes).hash; } catch (e) { st.warnings.push("image " + k + ": " + e.message); }
+      }
+    });
+
+    // ---- nodes ----
+    var done = 0, lastTick = Date.now();
+    async function tick(label) {
+      done++;
+      if (Date.now() - lastTick > 120) {
+        lastTick = Date.now();
+        progress(done, total, label);
+        await new Promise(function (r) { setTimeout(r, 0); });
+      }
+    }
+
+    function makeText(n) {
+      var t = figma.createText();
+      var text = n.segs.map(function (s) { return s.t; }).join("");
+      var f0 = fontFor(n.segs[0]);
+      t.fontName = f0;
+      t.characters = text;
+      var pos = 0;
+      n.segs.forEach(function (s) {
+        var end = pos + s.t.length;
+        if (end > pos) {
+          var fn = fontFor(s);
+          if (fn !== f0) t.setRangeFontName(pos, end, fn);
+          t.setRangeFontSize(pos, end, Math.max(1, s.sz));
+          if (!n.fill && s.c) t.setRangeFills(pos, end, [{ type: "SOLID", color: rgb(s.c), opacity: clamp01(s.c.a) }]);
+          if (s.ls) t.setRangeLetterSpacing(pos, end, { unit: "PIXELS", value: s.ls });
+          if (s.lh) t.setRangeLineHeight(pos, end, { unit: "PIXELS", value: s.lh });
+          if (s.deco) t.setRangeTextDecoration(pos, end, s.deco);
+          if (s.cs) t.setRangeTextCase(pos, end, s.cs);
+          if (s.href && /^https?:/.test(s.href)) { try { t.setRangeHyperlink(pos, end, { type: "URL", value: s.href }); } catch (e) {} }
+        }
+        pos = end;
+      });
+      if (n.fill) {
+        var gp = paint(n.fill, n.w, n.h, {});
+        if (gp) t.fills = [gp];
+      }
+      t.textAlignHorizontal = n.align || "LEFT";
+      t.name = n.name || text.slice(0, 48);
+      st.texts++;
+      return t;
+    }
+
+    function sizeText(t, n) {
+      if (n.auto) { t.textAutoResize = "WIDTH_AND_HEIGHT"; return; }
+      // a hair of slack: Figma's metrics are not the browser's, don't let it re-wrap
+      t.resize(Math.max(1, n.w + (n.lines > 1 ? 1 : 0.5)), Math.max(1, n.h));
+      t.textAutoResize = "HEIGHT";
+      if (n.trunc) {
+        try { t.textTruncation = "ENDING"; t.maxLines = n.trunc; } catch (e) {}
+      }
+    }
+
+    async function make(n, parent, px, py, parentAL) {
+      var node = null, leaf = true;
+      if (n.type === "text") {
+        node = makeText(n);
+        parent.appendChild(node);
+        sizeText(node, n);
+      } else if (n.type === "svg" || (n.svgImg && n.img && assets[n.img] && assets[n.img].svg)) {
+        var src = n.type === "svg" ? n.svg : assets[n.img].svg;
+        try {
+          node = figma.createNodeFromSvg(src);
+          node.name = n.name || "Vector";
+          parent.appendChild(node);
+          if (Math.abs(node.width - n.w) > 0.5 || Math.abs(node.height - n.h) > 0.5) node.rescale ? resizeSvg(node, n.w, n.h) : resizeSafe(node, n.w, n.h);
+          node.clipsContent = false;
+          if (n.op != null) node.opacity = n.op;
+          if (n.type !== "svg") { applyRadiusOnly(node, n); }
+          st.vectors++;
+        } catch (e) {
+          st.svgFailed++;
+          if (node && !node.removed) { try { node.remove(); } catch (e2) {} }
+          if (n.type === "svg") {
+            node = figma.createRectangle();
+            node.name = (n.name || "Vector") + " (unsupported SVG)";
+            node.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+            parent.appendChild(node);
+            resizeSafe(node, n.w, n.h);
+          } else {
+            node = figma.createRectangle();
+            parent.appendChild(node);
+            applyBox(node, n, hashes, st);
+            resizeSafe(node, n.w, n.h);
+          }
+        }
+      } else if (n.type === "rect") {
+        node = figma.createRectangle();
+        parent.appendChild(node);
+        applyBox(node, n, hashes, st);
+        resizeSafe(node, n.w, n.h);
+        if (n.img) st.images++;
+      } else {
+        leaf = false;
+        node = figma.createFrame();
+        parent.appendChild(node);
+        applyBox(node, n, hashes, st);
+        node.clipsContent = !!n.clip;
+        if (n.al) {
+          var al = n.al;
+          node.layoutMode = al.dir === "H" ? "HORIZONTAL" : "VERTICAL";
+          node.primaryAxisSizingMode = "FIXED";
+          node.counterAxisSizingMode = "FIXED";
+          node.itemSpacing = al.gap;
+          node.paddingTop = al.pt; node.paddingRight = al.pr; node.paddingBottom = al.pb; node.paddingLeft = al.pl;
+          node.primaryAxisAlignItems = al.primary;
+          node.counterAxisAlignItems = al.counter;
+          node.strokesIncludedInLayout = false;
+          st.autolayout++;
+        }
+        resizeSafe(node, n.w, n.h);
+        st.frames++;
+      }
+      node.name = n.name || node.name;
+      st.nodes++;
+
+      if (parentAL) {
+        if (n.abs) {
+          node.layoutPositioning = "ABSOLUTE";
+          place(node, n, n.x - px, n.y - py, leaf);
+        }
+      } else {
+        place(node, n, n.x - px, n.y - py, leaf);
+      }
+      await tick(n.name);
+
+      if (n.kids && n.kids.length) {
+        for (var i = 0; i < n.kids.length; i++) {
+          try { await make(n.kids[i], node, n.x, n.y, !!n.al); }
+          catch (e) { st.warnings.push((n.kids[i].name || n.kids[i].type) + ": " + e.message); }
+        }
+      }
+
+      if (parentAL && !n.abs) {
+        try {
+          if (n.fillH) {
+            if (node.type === "TEXT" && node.textAutoResize === "WIDTH_AND_HEIGHT") node.textAutoResize = "HEIGHT";
+            node.layoutSizingHorizontal = "FILL";
+          }
+          if (n.fillV && node.type !== "TEXT") node.layoutSizingVertical = "FILL";
+        } catch (e) {}
+      }
+      if (n.al) {
+        try {
+          if (n.al.hugP) node.primaryAxisSizingMode = "AUTO";
+          if (n.al.hugC) node.counterAxisSizingMode = "AUTO";
+        } catch (e) {}
+      }
+      return node;
+    }
+
+    function resizeSvg(node, w, h) {
+      // createNodeFromSvg already honours width/height; only rescale when it didn't
+      var s = Math.min(w / (node.width || 1), h / (node.height || 1));
+      if (isFinite(s) && s > 0 && Math.abs(s - 1) > 0.01) node.rescale(s);
+    }
+
+    function applyRadiusOnly(node, n) {
+      if (n.rad) { try { node.cornerRadius = Math.max.apply(null, n.rad); node.clipsContent = true; } catch (e) {} }
+    }
+
+    // ---- root ----
+    var parent = opts.parent || figma.currentPage;
+    var root = figma.createFrame();
+    root.name = opts.name || (doc.title + " \u00b7 " + doc.w);
+    root.fills = doc.bg ? [{ type: "SOLID", color: rgb(doc.bg), opacity: clamp01(doc.bg.a) }] : [];
+    root.clipsContent = true;
+    parent.appendChild(root);
+    root.resize(Math.max(1, doc.w), Math.max(1, doc.h));
+    root.x = opts.x != null ? opts.x : 0;
+    root.y = opts.y != null ? opts.y : 0;
+
+    var rootIR = doc.root;
+    if (rootIR.al) {
+      var ral = rootIR.al;
+      root.layoutMode = ral.dir === "H" ? "HORIZONTAL" : "VERTICAL";
+      root.primaryAxisSizingMode = "FIXED";
+      root.counterAxisSizingMode = "FIXED";
+      root.itemSpacing = ral.gap;
+      root.paddingTop = ral.pt; root.paddingRight = ral.pr; root.paddingBottom = ral.pb; root.paddingLeft = ral.pl;
+      root.primaryAxisAlignItems = ral.primary;
+      root.counterAxisAlignItems = ral.counter;
+      root.resize(Math.max(1, doc.w), Math.max(1, doc.h));
+      st.autolayout++;
+    }
+    var kids = rootIR.kids || [];
+    for (var i = 0; i < kids.length; i++) {
+      try { await make(kids[i], root, 0, 0, !!rootIR.al); }
+      catch (e) { st.warnings.push((kids[i].name || kids[i].type) + ": " + e.message); }
+    }
+    progress(total, total, "Done");
+    st.rootId = root.id;
+    st.root = root;
+    return st;
+  }
+
+  return { build: build, _linearTransform: linearTransform, _styleInfo: styleInfo };
+})();

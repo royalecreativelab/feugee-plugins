@@ -37,7 +37,7 @@
   </svg>
   <div class="brand-text">
     <h1>FEUGEE STUDIO</h1>
-    <p>Hermes Bridge <b>v2.3.0</b></p>
+    <p>Hermes Bridge <b>v2.5.0</b></p>
   </div>
 </header>
 
@@ -66,7 +66,7 @@
     </div>
     <div class="hb-log" id="log"></div>
     <div class="hb-composer">
-      <textarea id="input" placeholder="Perintah buat Hermes..." spellcheck="false"></textarea>
+      <textarea id="input" placeholder="Perintah buat Hermes... (aset: cariin SFX whoosh di Envato)" spellcheck="false"></textarea>
       <button class="tile hb-send" id="send" title="Kirim (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 20 4l-5 16-3.5-6.5z"/><path d="M11.5 13.5 20 4"/></svg><span>SEND</span></button>
     </div>
     <div class="hb-hint"><span id="hintKeys">Enter kirim - Esc stop - Cmd+K model</span><span id="usage"></span></div>
@@ -90,6 +90,7 @@
   <section class="card" data-accent="orange">
     <div class="card-head"><i class="bar"></i><span class="num">03</span><h2>SESSION</h2></div>
     <p class="meta" id="metaSession">Claude Opus 5.5</p>
+    <label class="hb-prof" title="Profil Hermes yang dipakai panel. Full = profil kamu sendiri (semua MCP, connector, skill, memory). Cepat = profil ramping, tool AE saja."><span>PROFIL</span><select id="profileSel"></select></label>
     <div class="hb-favs" id="favs"></div>
     <div class="tiles trio">
       <button class="tile" data-act="session:new" data-params="" title="Mulai sesi baru (riwayat chat dikosongkan)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>NEW</span></button>
@@ -112,6 +113,8 @@
 <script src="js/setup.js"></script>
 <script src="js/acp.js"></script>
 <script src="js/models.js"></script>
+<script src="js/envato-session.js"></script>
+<script src="js/envato.js"></script>
 <script src="js/mcp.js"></script>
 <script src="js/panel.js"></script>
 <script src="js/modes.js"></script>

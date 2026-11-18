@@ -288,8 +288,104 @@ function hbSaveFrame(compRef, t, outPath, fullRes) {
         if (f.exists) f.remove();
         var prev = c.resolutionFactor;
         if (fullRes) c.resolutionFactor = [1, 1];
-        c.saveFrameToPng(time, f);
-        if (fullRes) c.resolutionFactor = prev;
+        // restore the user's preview resolution even when the save throws
+        try { c.saveFrameToPng(time, f); }
+        finally { if (fullRes) c.resolutionFactor = prev; }
         return hbOk({ comp: c.name, time: hbRound(time), path: f.fsName, width: c.width, height: c.height, bg: hbVal(c.bgColor) });
+    } catch (e) { return hbErr(e); }
+}
+
+// ---- Envato / media import ----------------------------------------------
+
+// Folder of the saved project (null when unsaved) - import_media copies next to it.
+function hbProjectDir() {
+    try {
+        var f = app.project ? app.project.file : null;
+        return hbOk({ path: f ? f.fsName : null, dir: f ? f.parent.fsName : null });
+    } catch (e) { return hbErr(e); }
+}
+
+// "Envato/Pack name" -> FolderItem chain under the project root (created when missing).
+function hbFolderPath(pathStr) {
+    var parts = String(pathStr || "Envato").split("/"), parent = app.project.rootFolder, i, j, f, found, nm;
+    for (i = 0; i < parts.length; i++) {
+        nm = parts[i];
+        if (!nm) continue;
+        found = null;
+        for (j = 1; j <= parent.numItems; j++) {
+            f = parent.item(j);
+            if (f instanceof FolderItem && f.name === nm) { found = f; break; }
+        }
+        if (!found) {
+            found = app.project.items.addFolder(nm);
+            found.parentFolder = parent;
+        }
+        parent = found;
+    }
+    return parent;
+}
+
+// Comps inside an imported template project folder (what the user edits/renders).
+function hbCompsIn(folder, out, depth) {
+    var i, it;
+    if (depth > 6 || out.length >= 25) return;
+    for (i = 1; i <= folder.numItems; i++) {
+        it = folder.item(i);
+        if (it instanceof CompItem) out.push({ id: it.id, name: it.name, size: it.width + "x" + it.height, duration: hbRound(it.duration), layers: it.numLayers });
+        else if (it instanceof FolderItem) hbCompsIn(it, out, depth + 1);
+        if (out.length >= 25) return;
+    }
+}
+
+function hbImportOne(entry, folder, known, res) {
+    var p = entry[0], seq = entry[1], f = new File(p), it, io, row;
+    try {
+        if (!f.exists) { res.failed.push({ path: p, error: "file not found" }); return; }
+        if (known[f.fsName]) { it = known[f.fsName]; res.reused.push({ id: it.id, name: it.name }); return; }
+        io = new ImportOptions(f);
+        if (/\.(aep|aet)$/i.test(p)) io.importAs = ImportAsType.PROJECT;
+        else if (seq) { io.sequence = true; io.forceAlphabetical = true; }
+        it = app.project.importFile(io);
+        if (!it) { res.failed.push({ path: p, error: "importFile returned nothing" }); return; }
+        try { it.parentFolder = folder; } catch (e1) {}
+        row = { id: it.id, name: it.name };
+        if (it instanceof FolderItem) {
+            row.kind = "template";
+            row.comps = [];
+            hbCompsIn(it, row.comps, 0);
+        } else if (it instanceof CompItem) row.kind = "comp";
+        else {
+            row.kind = seq ? "sequence" : "footage";
+            try { if (it.duration) row.duration = hbRound(it.duration); } catch (e2) {}
+            try { if (it.width) row.size = it.width + "x" + it.height; } catch (e3) {}
+        }
+        res.imported.push(row);
+    } catch (e) {
+        res.failed.push({ path: p, error: e.toString() });
+    }
+}
+
+// list = [[path, isSequence], ...]. One undo group, dialogs suppressed
+// (a template with missing fonts would otherwise block on a modal alert).
+function hbImportFiles(list, binPath) {
+    var res = { imported: [], reused: [], failed: [] }, i, it, known = {}, folder;
+    try {
+        if (!app.project) throw new Error("no project open");
+        for (i = 1; i <= app.project.numItems; i++) {
+            it = app.project.item(i);
+            try { if (it instanceof FootageItem && it.file) known[it.file.fsName] = it; } catch (e0) {}
+        }
+        app.beginUndoGroup("Hermes: Import " + (binPath || "Envato"));
+        try { app.beginSuppressDialogs(); } catch (e1) {}
+        try {
+            folder = hbFolderPath(binPath || "Envato");
+            for (i = 0; i < list.length; i++) hbImportOne(list[i], folder, known, res);
+        } finally {
+            try { app.endSuppressDialogs(false); } catch (e2) {}
+            app.endUndoGroup();
+        }
+        res.folder = binPath || "Envato";
+        res.folderId = folder.id;
+        return hbOk(res);
     } catch (e) { return hbErr(e); }
 }

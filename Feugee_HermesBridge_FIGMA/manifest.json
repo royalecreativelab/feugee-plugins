@@ -1,0 +1,24 @@
+{
+  "name": "Feugee Hermes Bridge",
+  "id": "feugee-hermes-bridge-figma",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "enablePrivatePluginApi": true,
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ],
+    "devAllowedDomains": [
+      "http://localhost:3846"
+    ],
+    "reasoning": "Talks only to the Hermes Bridge relay on this Mac (localhost:3846) to receive jobs from Hermes and return results."
+  },
+  "permissions": [
+    "currentuser"
+  ]
+}

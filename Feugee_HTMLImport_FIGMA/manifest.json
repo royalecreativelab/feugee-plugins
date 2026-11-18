@@ -1,0 +1,16 @@
+{
+  "name": "Feugee HTML Import",
+  "id": "feugee-html-import",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Imports arbitrary web pages chosen by the user: the page, its stylesheets, fonts and images are fetched from whatever host the page uses, optionally through a CORS proxy the user selects (including a local one on 127.0.0.1:8787)."
+  },
+  "relaunchButtons": [
+    { "command": "reimport", "name": "Re-import" }
+  ]
+}
